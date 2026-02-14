@@ -38,3 +38,7 @@ OpenCAD is a simple CAD web app for designing 3D structures with material labeli
 - **BOM Calculation:** Aggregates materials by type using different quantity calculations (board feet for lumber, square feet for sheet goods, etc.)
 - **Box Selection:** Click to select, drag to move on XZ plane, edit properties in side panel
 - **Auto-save:** Project saves to IndexedDB whenever state changes
+
+## Library and API documentation
+
+Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
