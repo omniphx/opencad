@@ -18,11 +18,13 @@ function AppContent() {
         onToggleComponentLibrary={() => setShowComponentLibrary((v) => !v)}
         showComponentLibrary={showComponentLibrary}
       />
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         <Viewport />
-        <PropertiesPanel />
-        {!isBuilderMode && showComponentLibrary && <ComponentLibraryPanel />}
-        {!isBuilderMode && <BOMPanel />}
+        <div className="absolute top-0 right-0 bottom-0 flex">
+          <PropertiesPanel />
+          {!isBuilderMode && showComponentLibrary && <ComponentLibraryPanel />}
+          {!isBuilderMode && <BOMPanel />}
+        </div>
       </div>
     </div>
   );

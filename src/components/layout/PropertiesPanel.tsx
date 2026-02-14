@@ -9,12 +9,7 @@ export function PropertiesPanel() {
   const { project } = useProject();
 
   if (!selectedBox) {
-    return (
-      <div className="w-72 bg-white border-l border-slate-200 p-4">
-        <h2 className="text-slate-800 font-semibold mb-4">Properties</h2>
-        <p className="text-slate-400 text-sm">Select a box to edit its properties</p>
-      </div>
-    );
+    return null;
   }
 
   const material = getMaterialById(selectedBox.materialId);
