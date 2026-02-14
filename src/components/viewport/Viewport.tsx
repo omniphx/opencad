@@ -7,6 +7,7 @@ import { IsometricCamera } from './IsometricCamera';
 import { Grid } from './Grid';
 import { Box3D } from './Box3D';
 import { useProjectStore } from '../../store/projectStore';
+import { snapToGrid } from '../../core/units';
 
 const MIN_ZOOM = 20;
 const MAX_ZOOM = 500;
@@ -57,6 +58,11 @@ export function Viewport() {
   const handleMove = (id: string, position: { x: number; y: number; z: number }) => {
     updateBox(id, { position });
   };
+
+  const snap = useCallback(
+    (v: number) => state.snapEnabled ? snapToGrid(v, state.project.unitSystem) : v,
+    [state.project.unitSystem, state.snapEnabled]
+  );
 
   const handleBackgroundClick = () => {
     selectBox(null);
@@ -109,6 +115,7 @@ export function Viewport() {
             isSelected={box.id === state.selectedBoxId}
             onSelect={selectBox}
             onMove={handleMove}
+            snap={snap}
           />
         ))}
       </Canvas>

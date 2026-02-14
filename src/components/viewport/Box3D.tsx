@@ -10,9 +10,10 @@ interface Box3DProps {
   isSelected: boolean;
   onSelect: (id: string) => void;
   onMove: (id: string, position: { x: number; y: number; z: number }) => void;
+  snap: (v: number) => number;
 }
 
-export function Box3D({ box, allBoxes, isSelected, onSelect, onMove }: Box3DProps) {
+export function Box3D({ box, allBoxes, isSelected, onSelect, onMove, snap }: Box3DProps) {
   const meshRef = useRef<Mesh>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(new Vector3());
@@ -67,8 +68,8 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onMove }: Box3DProp
       intersectPoint
     );
 
-    const newX = intersectPoint.x + dragOffset.x;
-    const newZ = intersectPoint.z + dragOffset.z;
+    const newX = snap(intersectPoint.x + dragOffset.x);
+    const newZ = snap(intersectPoint.z + dragOffset.z);
 
     // Find the highest box we overlap on XZ and stack on top of it
     // Position is the corner, so box extends from (x, y, z) to (x+w, y+h, z+d)

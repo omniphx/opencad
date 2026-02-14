@@ -27,6 +27,7 @@ interface ProjectState {
   currentTemplate: ComponentTemplate | null;
   componentLibrary: ComponentTemplate[];
   clipboard: Box | null;
+  snapEnabled: boolean;
 }
 
 type ProjectAction =
@@ -46,7 +47,8 @@ type ProjectAction =
   | { type: 'DELETE_COMPONENT'; id: string }
   | { type: 'COPY_BOX'; box: Box }
   | { type: 'PASTE_BOX'; box: Box }
-  | { type: 'DUPLICATE_BOX'; box: Box };
+  | { type: 'DUPLICATE_BOX'; box: Box }
+  | { type: 'TOGGLE_SNAP' };
 
 function createDefaultProject(): Project {
   return {
@@ -177,6 +179,9 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
         componentLibrary: state.componentLibrary.filter((c) => c.id !== action.id),
       };
 
+    case 'TOGGLE_SNAP':
+      return { ...state, snapEnabled: !state.snapEnabled };
+
     case 'COPY_BOX':
       return { ...state, clipboard: action.box };
 
@@ -209,6 +214,7 @@ interface ProjectContextValue {
   cancelComponentBuilder: () => void;
   placeComponent: (template: ComponentTemplate) => void;
   deleteComponentTemplate: (id: string) => void;
+  toggleSnap: () => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
@@ -222,6 +228,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     currentTemplate: null,
     componentLibrary: [],
     clipboard: null,
+    snapEnabled: true,
   });
 
   // Load project and components from IndexedDB on mount
@@ -419,6 +426,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DELETE_COMPONENT', id });
   }, []);
 
+  const toggleSnap = useCallback(() => {
+    dispatch({ type: 'TOGGLE_SNAP' });
+  }, []);
+
   return (
     <ProjectContext.Provider
       value={{
@@ -438,6 +449,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         cancelComponentBuilder,
         placeComponent,
         deleteComponentTemplate,
+        toggleSnap,
       }}
     >
       {children}

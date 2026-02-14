@@ -62,6 +62,18 @@ export function calculateBoardFeet(widthM: number, heightM: number, depthM: numb
   return (thicknessInches * widthInches * lengthFeet) / 12;
 }
 
+/** Snap increment in meters for each unit system */
+export function getSnapIncrement(unitSystem: UnitSystem): number {
+  if (unitSystem === 'metric') return 0.01;  // 1 cm
+  return 0.0254;  // 1 inch (for both feet and inches)
+}
+
+/** Snap a value in meters to the nearest grid increment */
+export function snapToGrid(meters: number, unitSystem: UnitSystem): number {
+  const increment = getSnapIncrement(unitSystem);
+  return Math.round(meters / increment) * increment;
+}
+
 /** Normalize legacy unit system values (e.g. 'imperial' from old saved projects) */
 export function normalizeUnitSystem(value: string): UnitSystem {
   if (value === 'imperial') return 'feet';

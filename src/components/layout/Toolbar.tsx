@@ -9,7 +9,7 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ onToggleComponentLibrary, showComponentLibrary }: ToolbarProps) {
-  const { state, addBox, saveComponent, cancelComponentBuilder } = useProjectStore();
+  const { state, addBox, saveComponent, cancelComponentBuilder, toggleSnap } = useProjectStore();
   const { project, setUnitSystem } = useProject();
   const [componentName, setComponentName] = useState('');
   const [showMaterialMenu, setShowMaterialMenu] = useState(false);
@@ -143,6 +143,19 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary }: Tool
             {unit === 'feet' ? 'ft' : unit === 'inches' ? 'in' : 'cm'}
           </button>
         ))}
+
+        <div className="h-6 w-px bg-slate-200" />
+
+        <button
+          onClick={toggleSnap}
+          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+            state.snapEnabled
+              ? 'bg-blue-500 text-white shadow-sm'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+          }`}
+        >
+          Snap
+        </button>
       </div>
     </div>
   );
