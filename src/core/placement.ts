@@ -12,15 +12,14 @@ export function placeComponentBoxes(
   if (template.boxes.length === 0) return [];
 
   // Calculate bounding box of the template
+  // Position is the corner, so box extends from (x,z) to (x+w,z+d)
   let minX = Infinity, maxX = -Infinity;
   let minZ = Infinity, maxZ = -Infinity;
   for (const box of template.boxes) {
-    const hw = box.dimensions.width / 2;
-    const hd = box.dimensions.depth / 2;
-    minX = Math.min(minX, box.position.x - hw);
-    maxX = Math.max(maxX, box.position.x + hw);
-    minZ = Math.min(minZ, box.position.z - hd);
-    maxZ = Math.max(maxZ, box.position.z + hd);
+    minX = Math.min(minX, box.position.x);
+    maxX = Math.max(maxX, box.position.x + box.dimensions.width);
+    minZ = Math.min(minZ, box.position.z);
+    maxZ = Math.max(maxZ, box.position.z + box.dimensions.depth);
   }
 
   const templateWidth = maxX - minX;
@@ -39,10 +38,10 @@ export function placeComponentBoxes(
     const tMaxZ = centerZ + templateDepth / 2;
 
     for (const b of existingBoxes) {
-      const bMinX = b.position.x - b.dimensions.width / 2;
-      const bMaxX = b.position.x + b.dimensions.width / 2;
-      const bMinZ = b.position.z - b.dimensions.depth / 2;
-      const bMaxZ = b.position.z + b.dimensions.depth / 2;
+      const bMinX = b.position.x;
+      const bMaxX = b.position.x + b.dimensions.width;
+      const bMinZ = b.position.z;
+      const bMaxZ = b.position.z + b.dimensions.depth;
 
       if (
         tMinX < bMaxX + spacing &&

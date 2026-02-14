@@ -258,15 +258,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     const posZ = 0;
     const spacing = 0.25;
 
+    // Position is the bottom-left-front corner, so box extends from (x,y,z) to (x+w,y+h,z+d)
     const isOverlapping = (x: number, z: number) => {
       for (const b of boxes) {
-        const bw = b.dimensions.width / 2;
-        const bd = b.dimensions.depth / 2;
-        const nw = defaultDim.width / 2;
-        const nd = defaultDim.depth / 2;
         if (
-          Math.abs(x - b.position.x) < bw + nw + spacing &&
-          Math.abs(z - b.position.z) < bd + nd + spacing
+          x < b.position.x + b.dimensions.width + spacing &&
+          b.position.x < x + defaultDim.width + spacing &&
+          z < b.position.z + b.dimensions.depth + spacing &&
+          b.position.z < z + defaultDim.depth + spacing
         ) {
           return true;
         }
@@ -280,7 +279,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     const box: Box = {
       id: uuid(),
-      position: { x: posX, y: defaultDim.height / 2, z: posZ },
+      position: { x: posX, y: 0, z: posZ },
       dimensions: defaultDim,
       rotation: 0,
       materialId,

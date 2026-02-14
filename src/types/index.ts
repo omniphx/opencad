@@ -1,6 +1,6 @@
 export interface Box {
   id: string;
-  position: { x: number; y: number; z: number };  // meters
+  position: { x: number; y: number; z: number };  // meters, bottom-left-front corner
   dimensions: { width: number; height: number; depth: number };  // meters
   rotation: number;  // Y-axis only, radians
   materialId: string;

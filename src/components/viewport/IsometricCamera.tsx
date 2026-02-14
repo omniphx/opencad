@@ -17,7 +17,7 @@ export function IsometricCamera() {
   // Isometric angle: camera looks from corner at 45 degrees
   // Standard isometric: rotate 45 on Y, then ~35.264 degrees down (arctan(1/sqrt(2)))
   const distance = 20;
-  const angle = Math.PI / 4; // 45 degrees
+  const angle = Math.PI * 5 / 4; // 225 degrees — puts origin at the bottom of the isometric view
   const elevation = Math.atan(1 / Math.sqrt(2)); // ~35.264 degrees
 
   const x = distance * Math.cos(elevation) * Math.sin(angle);

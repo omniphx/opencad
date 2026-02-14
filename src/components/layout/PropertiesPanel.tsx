@@ -20,10 +20,25 @@ export function PropertiesPanel() {
     });
   };
 
-  const handlePositionChange = (key: 'x' | 'y' | 'z', value: number) => {
-    updateBox(selectedBox.id, {
-      position: { ...selectedBox.position, [key]: value },
-    });
+  // Remap user-facing axes to Three.js axes for the isometric view:
+  // User X (left-right on ground) = Three.js Z
+  // User Y (forward-back on ground) = Three.js X
+  // User Z (height) = Three.js Y
+  const handleUserPositionChange = (userAxis: 'x' | 'y' | 'z', value: number) => {
+    if (userAxis === 'x') {
+      updateBox(selectedBox.id, { position: { ...selectedBox.position, z: value } });
+    } else if (userAxis === 'y') {
+      updateBox(selectedBox.id, { position: { ...selectedBox.position, x: value } });
+    } else {
+      updateBox(selectedBox.id, { position: { ...selectedBox.position, y: value } });
+    }
+  };
+
+  // Convert internal position to user-facing coordinates
+  const userPosition = {
+    x: selectedBox.position.z,
+    y: selectedBox.position.x,
+    z: selectedBox.position.y,
   };
 
   const handleRotationChange = (degrees: number) => {
@@ -106,24 +121,24 @@ export function PropertiesPanel() {
           <div className="space-y-2">
             <DimensionInput
               label="X"
-              value={selectedBox.position.x}
+              value={userPosition.x}
               unitSystem={project.unitSystem}
-              onChange={(v) => handlePositionChange('x', v)}
+              onChange={(v) => handleUserPositionChange('x', v)}
               min={-100}
             />
             <DimensionInput
               label="Y"
-              value={selectedBox.position.y}
+              value={userPosition.y}
               unitSystem={project.unitSystem}
-              onChange={(v) => handlePositionChange('y', v)}
-              min={0}
+              onChange={(v) => handleUserPositionChange('y', v)}
+              min={-100}
             />
             <DimensionInput
               label="Z"
-              value={selectedBox.position.z}
+              value={userPosition.z}
               unitSystem={project.unitSystem}
-              onChange={(v) => handlePositionChange('z', v)}
-              min={-100}
+              onChange={(v) => handleUserPositionChange('z', v)}
+              min={0}
             />
           </div>
         </div>

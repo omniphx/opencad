@@ -34,9 +34,9 @@ export function DimensionInput({
 
   const handleBlur = () => {
     const parsed = parseFloat(inputValue);
-    if (!isNaN(parsed) && parsed > 0) {
+    if (!isNaN(parsed) && parsed >= min) {
       const meters = displayUnitToMeters(parsed, unitSystem);
-      onChange(Math.max(meters, min));
+      onChange(meters);
     } else {
       setInputValue(displayValue.toFixed(2));
     }

@@ -71,25 +71,26 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onMove }: Box3DProp
     const newZ = intersectPoint.z + dragOffset.z;
 
     // Find the highest box we overlap on XZ and stack on top of it
-    const halfW = box.dimensions.width / 2;
-    const halfD = box.dimensions.depth / 2;
+    // Position is the corner, so box extends from (x, y, z) to (x+w, y+h, z+d)
     let stackY = 0; // ground level
 
     for (const other of allBoxes) {
       if (other.id === box.id) continue;
-      const oHalfW = other.dimensions.width / 2;
-      const oHalfD = other.dimensions.depth / 2;
-      const overlapX = Math.abs(newX - other.position.x) < halfW + oHalfW;
-      const overlapZ = Math.abs(newZ - other.position.z) < halfD + oHalfD;
+      const overlapX =
+        newX < other.position.x + other.dimensions.width &&
+        other.position.x < newX + box.dimensions.width;
+      const overlapZ =
+        newZ < other.position.z + other.dimensions.depth &&
+        other.position.z < newZ + box.dimensions.depth;
       if (overlapX && overlapZ) {
-        const otherTop = other.position.y + other.dimensions.height / 2;
+        const otherTop = other.position.y + other.dimensions.height;
         if (otherTop > stackY) stackY = otherTop;
       }
     }
 
     onMove(box.id, {
       x: newX,
-      y: stackY + box.dimensions.height / 2,
+      y: stackY,
       z: newZ,
     });
   };
@@ -98,6 +99,11 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onMove }: Box3DProp
     setIsDragging(false);
   };
 
+  // Offset to render the mesh so that box.position = bottom-left-front corner
+  const offsetX = box.dimensions.width / 2;
+  const offsetY = box.dimensions.height / 2;
+  const offsetZ = box.dimensions.depth / 2;
+
   return (
     <group
       position={[box.position.x, box.position.y, box.position.z]}
@@ -105,6 +111,7 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onMove }: Box3DProp
     >
       <mesh
         ref={meshRef}
+        position={[offsetX, offsetY, offsetZ]}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -122,7 +129,7 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onMove }: Box3DProp
       </mesh>
 
       {/* Edge outlines for shape definition */}
-      <lineSegments>
+      <lineSegments position={[offsetX, offsetY, offsetZ]}>
         <edgesGeometry args={[edgeGeometry]} />
         <lineBasicMaterial
           color={isSelected ? '#3b82f6' : '#00000040'}
