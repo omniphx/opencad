@@ -92,6 +92,7 @@ export function Box3D({ box, isSelected, onSelect, onMove }: Box3DProps) {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
+        onClick={(e: ThreeEvent<MouseEvent>) => e.stopPropagation()}
       >
         <boxGeometry
           args={[box.dimensions.width, box.dimensions.height, box.dimensions.depth]}
