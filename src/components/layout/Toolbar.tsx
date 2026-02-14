@@ -26,33 +26,33 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary }: Tool
   };
 
   return (
-    <div className="h-14 bg-gray-800 border-b border-gray-700 flex items-center px-4 gap-4">
-      <h1 className="text-white font-bold text-lg">OpenCAD</h1>
+    <div className="h-14 bg-white border-b border-slate-200 shadow-sm flex items-center px-4 gap-4">
+      <h1 className="text-slate-800 font-bold text-lg tracking-tight">OpenCAD</h1>
 
       {isBuilderMode && (
-        <span className="px-2 py-0.5 bg-amber-600 text-white text-xs font-medium rounded">
-          Component Builder
+        <span className="px-2 py-0.5 bg-amber-400 text-amber-900 text-xs font-semibold rounded-full">
+          Builder Mode
         </span>
       )}
 
-      <div className="h-6 w-px bg-gray-600" />
+      <div className="h-6 w-px bg-slate-200" />
 
       <button
         onClick={() => addBox()}
-        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
+        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
       >
-        Add Box
+        + Add Box
       </button>
 
       {isBuilderMode ? (
         <>
-          <div className="h-6 w-px bg-gray-600" />
+          <div className="h-6 w-px bg-slate-200" />
           <input
             type="text"
             value={componentName}
             onChange={(e) => setComponentName(e.target.value)}
             placeholder="Component name..."
-            className="px-3 py-1.5 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+            className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 w-48"
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSave();
             }}
@@ -60,13 +60,13 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary }: Tool
           <button
             onClick={handleSave}
             disabled={(state.currentTemplate?.boxes.length ?? 0) === 0}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium rounded transition-colors"
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
           >
             Save Component
           </button>
           <button
             onClick={handleCancel}
-            className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium rounded transition-colors"
+            className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded-lg transition-colors"
           >
             Cancel
           </button>
@@ -75,10 +75,10 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary }: Tool
         <>
           <button
             onClick={onToggleComponentLibrary}
-            className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
               showComponentLibrary
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                ? 'bg-violet-500 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
             Components
@@ -89,23 +89,23 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary }: Tool
       <div className="flex-1" />
 
       <div className="flex items-center gap-2">
-        <span className="text-gray-400 text-sm">Units:</span>
+        <span className="text-slate-400 text-sm">Units:</span>
         <button
           onClick={() => setUnitSystem('imperial')}
-          className={`px-3 py-1 text-sm rounded transition-colors ${
+          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
             project.unitSystem === 'imperial'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-blue-500 text-white shadow-sm'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
           }`}
         >
           Imperial
         </button>
         <button
           onClick={() => setUnitSystem('metric')}
-          className={`px-3 py-1 text-sm rounded transition-colors ${
+          className={`px-3 py-1 text-sm rounded-lg transition-colors ${
             project.unitSystem === 'metric'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              ? 'bg-blue-500 text-white shadow-sm'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
           }`}
         >
           Metric

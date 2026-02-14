@@ -21,11 +21,11 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onMove }: Box3DProp
 
   const color = getMaterialColor(box.materialId);
 
-  const outlineGeometry = useMemo(() => {
+  const edgeGeometry = useMemo(() => {
     return new BoxGeometry(
-      box.dimensions.width * 1.01,
-      box.dimensions.height * 1.01,
-      box.dimensions.depth * 1.01
+      box.dimensions.width,
+      box.dimensions.height,
+      box.dimensions.depth
     );
   }, [box.dimensions.width, box.dimensions.height, box.dimensions.depth]);
 
@@ -114,20 +114,21 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onMove }: Box3DProp
         <boxGeometry
           args={[box.dimensions.width, box.dimensions.height, box.dimensions.depth]}
         />
-        <meshStandardMaterial
+        <meshLambertMaterial
           color={color}
           transparent={isSelected}
-          opacity={isSelected ? 0.9 : 1}
+          opacity={isSelected ? 0.85 : 1}
         />
       </mesh>
 
-      {/* Selection outline */}
-      {isSelected && (
-        <lineSegments>
-          <edgesGeometry args={[outlineGeometry]} />
-          <lineBasicMaterial color="#3b82f6" linewidth={2} />
-        </lineSegments>
-      )}
+      {/* Edge outlines for shape definition */}
+      <lineSegments>
+        <edgesGeometry args={[edgeGeometry]} />
+        <lineBasicMaterial
+          color={isSelected ? '#3b82f6' : '#00000040'}
+          linewidth={2}
+        />
+      </lineSegments>
     </group>
   );
 }

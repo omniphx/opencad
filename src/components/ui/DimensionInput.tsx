@@ -50,7 +50,7 @@ export function DimensionInput({
 
   return (
     <div className="flex items-center gap-2">
-      <label className="text-gray-400 text-sm w-16">{label}</label>
+      <label className="text-slate-500 text-sm w-16">{label}</label>
       <input
         type="number"
         value={inputValue}
@@ -59,9 +59,9 @@ export function DimensionInput({
         onKeyDown={handleKeyDown}
         step="0.1"
         min="0"
-        className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
       />
-      <span className="text-gray-400 text-sm w-8">{getDisplayUnitLabel(unitSystem)}</span>
+      <span className="text-slate-400 text-sm w-8">{getDisplayUnitLabel(unitSystem)}</span>
     </div>
   );
 }

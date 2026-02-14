@@ -13,7 +13,7 @@ function AppContent() {
   const isBuilderMode = state.mode === 'component-builder';
 
   return (
-    <div className="h-screen flex flex-col bg-gray-900">
+    <div className="h-screen flex flex-col bg-slate-100">
       <Toolbar
         onToggleComponentLibrary={() => setShowComponentLibrary((v) => !v)}
         showComponentLibrary={showComponentLibrary}

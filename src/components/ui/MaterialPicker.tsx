@@ -10,7 +10,7 @@ export function MaterialPicker({ value, onChange }: MaterialPickerProps) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
     >
       {DEFAULT_MATERIALS.map((material) => (
         <option key={material.id} value={material.id}>

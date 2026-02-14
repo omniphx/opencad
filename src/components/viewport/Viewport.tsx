@@ -17,7 +17,7 @@ export function Viewport() {
   };
 
   return (
-    <div className="flex-1 bg-gray-900">
+    <div className="flex-1 bg-sky-50">
       <Canvas>
         <IsometricCamera />
         <OrbitControls
@@ -27,9 +27,12 @@ export function Viewport() {
           minZoom={20}
           maxZoom={500}
         />
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[10, 20, 10]} intensity={0.8} castShadow />
-        <directionalLight position={[-10, 20, -10]} intensity={0.3} />
+        {/* Hemisphere light gives different tint to sky-facing vs ground-facing surfaces */}
+        <hemisphereLight args={['#b0d0ff', '#806040', 0.6]} />
+        {/* Key light from upper-right-front */}
+        <directionalLight position={[5, 12, 8]} intensity={1} />
+        {/* Fill light from left to soften shadows without flattening */}
+        <directionalLight position={[-8, 6, -3]} intensity={0.25} />
 
         <Grid />
 

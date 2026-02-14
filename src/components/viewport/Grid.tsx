@@ -7,10 +7,10 @@ export function Grid() {
       args={[20, 20]}
       cellSize={0.5}
       cellThickness={0.5}
-      cellColor="#6b7280"
+      cellColor="#94a3b8"
       sectionSize={1}
       sectionThickness={1}
-      sectionColor="#374151"
+      sectionColor="#64748b"
       fadeDistance={50}
       fadeStrength={1}
       infiniteGrid

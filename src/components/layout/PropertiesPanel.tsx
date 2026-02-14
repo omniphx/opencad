@@ -10,9 +10,9 @@ export function PropertiesPanel() {
 
   if (!selectedBox) {
     return (
-      <div className="w-72 bg-gray-800 border-l border-gray-700 p-4">
-        <h2 className="text-white font-semibold mb-4">Properties</h2>
-        <p className="text-gray-500 text-sm">Select a box to edit its properties</p>
+      <div className="w-72 bg-white border-l border-slate-200 p-4">
+        <h2 className="text-slate-800 font-semibold mb-4">Properties</h2>
+        <p className="text-slate-400 text-sm">Select a box to edit its properties</p>
       </div>
     );
   }
@@ -44,13 +44,13 @@ export function PropertiesPanel() {
   const rotationDegrees = Math.round((selectedBox.rotation * 180) / Math.PI);
 
   return (
-    <div className="w-72 bg-gray-800 border-l border-gray-700 p-4 overflow-y-auto">
-      <h2 className="text-white font-semibold mb-4">Properties</h2>
+    <div className="w-72 bg-white border-l border-slate-200 p-4 overflow-y-auto">
+      <h2 className="text-slate-800 font-semibold mb-4">Properties</h2>
 
       <div className="space-y-6">
         {/* Material */}
         <div>
-          <h3 className="text-gray-300 text-sm font-medium mb-2">Material</h3>
+          <h3 className="text-slate-600 text-sm font-medium mb-2">Material</h3>
           <MaterialPicker
             value={selectedBox.materialId}
             onChange={(materialId) => updateBox(selectedBox.id, { materialId })}
@@ -61,7 +61,7 @@ export function PropertiesPanel() {
                 className="w-4 h-4 rounded"
                 style={{ backgroundColor: material.color }}
               />
-              <span className="text-gray-400 text-xs capitalize">
+              <span className="text-slate-400 text-xs capitalize">
                 {material.unitType.replace('_', ' ')}
               </span>
             </div>
@@ -70,19 +70,19 @@ export function PropertiesPanel() {
 
         {/* Label */}
         <div>
-          <h3 className="text-gray-300 text-sm font-medium mb-2">Label</h3>
+          <h3 className="text-slate-600 text-sm font-medium mb-2">Label</h3>
           <input
             type="text"
             value={selectedBox.label || ''}
             onChange={(e) => handleLabelChange(e.target.value)}
             placeholder="Optional label..."
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
 
         {/* Dimensions */}
         <div>
-          <h3 className="text-gray-300 text-sm font-medium mb-2">Dimensions</h3>
+          <h3 className="text-slate-600 text-sm font-medium mb-2">Dimensions</h3>
           <div className="space-y-2">
             <DimensionInput
               label="Width"
@@ -107,7 +107,7 @@ export function PropertiesPanel() {
 
         {/* Position */}
         <div>
-          <h3 className="text-gray-300 text-sm font-medium mb-2">Position</h3>
+          <h3 className="text-slate-600 text-sm font-medium mb-2">Position</h3>
           <div className="space-y-2">
             <DimensionInput
               label="X"
@@ -135,23 +135,23 @@ export function PropertiesPanel() {
 
         {/* Rotation */}
         <div>
-          <h3 className="text-gray-300 text-sm font-medium mb-2">Rotation (Y-axis)</h3>
+          <h3 className="text-slate-600 text-sm font-medium mb-2">Rotation (Y-axis)</h3>
           <div className="flex items-center gap-2">
             <input
               type="number"
               value={rotationDegrees}
               onChange={(e) => handleRotationChange(parseInt(e.target.value) || 0)}
               step="15"
-              className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-2 py-1 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             />
-            <span className="text-gray-400 text-sm">deg</span>
+            <span className="text-slate-400 text-sm">deg</span>
           </div>
         </div>
 
         {/* Delete */}
         <button
           onClick={() => deleteBox(selectedBox.id)}
-          className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded transition-colors"
+          className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
         >
           Delete Box
         </button>
