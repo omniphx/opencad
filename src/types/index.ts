@@ -31,3 +31,10 @@ export interface BOMEntry {
   quantity: number;
   unit: string;
 }
+
+export interface ComponentTemplate {
+  id: string;
+  name: string;
+  boxes: Box[];       // positions relative to origin
+  createdAt: number;
+}

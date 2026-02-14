@@ -7,14 +7,24 @@ import {
   ReactNode,
 } from 'react';
 import { v4 as uuid } from 'uuid';
-import { Box, Project, UnitSystem } from '../types';
-import { saveProject, loadDefaultProject } from '../core/storage';
+import { Box, Project, UnitSystem, ComponentTemplate } from '../types';
+import {
+  saveProject,
+  loadDefaultProject,
+  saveComponent as saveComponentToDb,
+  getAllComponents,
+  deleteComponent as deleteComponentFromDb,
+} from '../core/storage';
 import { DEFAULT_MATERIALS } from '../core/materials';
+import { placeComponentBoxes } from '../core/placement';
 
 interface ProjectState {
   project: Project;
   selectedBoxId: string | null;
   isLoading: boolean;
+  mode: 'project' | 'component-builder';
+  currentTemplate: ComponentTemplate | null;
+  componentLibrary: ComponentTemplate[];
 }
 
 type ProjectAction =
@@ -25,7 +35,13 @@ type ProjectAction =
   | { type: 'DELETE_BOX'; id: string }
   | { type: 'SELECT_BOX'; id: string | null }
   | { type: 'SET_UNIT_SYSTEM'; unitSystem: UnitSystem }
-  | { type: 'SET_PROJECT_NAME'; name: string };
+  | { type: 'SET_PROJECT_NAME'; name: string }
+  | { type: 'START_COMPONENT_BUILDER' }
+  | { type: 'SAVE_COMPONENT'; name: string }
+  | { type: 'CANCEL_COMPONENT_BUILDER' }
+  | { type: 'PLACE_COMPONENT'; template: ComponentTemplate }
+  | { type: 'LOAD_COMPONENTS'; components: ComponentTemplate[] }
+  | { type: 'DELETE_COMPONENT'; id: string };
 
 function createDefaultProject(): Project {
   return {
@@ -33,6 +49,25 @@ function createDefaultProject(): Project {
     name: 'Sauna Project',
     unitSystem: 'imperial',
     boxes: [],
+  };
+}
+
+function getActiveBoxes(state: ProjectState): Box[] {
+  return state.mode === 'component-builder'
+    ? (state.currentTemplate?.boxes ?? [])
+    : state.project.boxes;
+}
+
+function setActiveBoxes(state: ProjectState, boxes: Box[]): ProjectState {
+  if (state.mode === 'component-builder' && state.currentTemplate) {
+    return {
+      ...state,
+      currentTemplate: { ...state.currentTemplate, boxes },
+    };
+  }
+  return {
+    ...state,
+    project: { ...state.project, boxes },
   };
 }
 
@@ -44,36 +79,26 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
     case 'SET_LOADING':
       return { ...state, isLoading: action.isLoading };
 
-    case 'ADD_BOX':
-      return {
-        ...state,
-        project: {
-          ...state.project,
-          boxes: [...state.project.boxes, action.box],
-        },
-      };
+    case 'ADD_BOX': {
+      const boxes = [...getActiveBoxes(state), action.box];
+      return setActiveBoxes(state, boxes);
+    }
 
-    case 'UPDATE_BOX':
-      return {
-        ...state,
-        project: {
-          ...state.project,
-          boxes: state.project.boxes.map((box) =>
-            box.id === action.id ? { ...box, ...action.updates } : box
-          ),
-        },
-      };
+    case 'UPDATE_BOX': {
+      const boxes = getActiveBoxes(state).map((box) =>
+        box.id === action.id ? { ...box, ...action.updates } : box
+      );
+      return setActiveBoxes(state, boxes);
+    }
 
-    case 'DELETE_BOX':
+    case 'DELETE_BOX': {
+      const boxes = getActiveBoxes(state).filter((box) => box.id !== action.id);
+      const newState = setActiveBoxes(state, boxes);
       return {
-        ...state,
-        project: {
-          ...state.project,
-          boxes: state.project.boxes.filter((box) => box.id !== action.id),
-        },
-        selectedBoxId:
-          state.selectedBoxId === action.id ? null : state.selectedBoxId,
+        ...newState,
+        selectedBoxId: state.selectedBoxId === action.id ? null : state.selectedBoxId,
       };
+    }
 
     case 'SELECT_BOX':
       return { ...state, selectedBoxId: action.id };
@@ -90,6 +115,63 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
         project: { ...state.project, name: action.name },
       };
 
+    case 'START_COMPONENT_BUILDER':
+      return {
+        ...state,
+        mode: 'component-builder',
+        selectedBoxId: null,
+        currentTemplate: {
+          id: uuid(),
+          name: '',
+          boxes: [],
+          createdAt: Date.now(),
+        },
+      };
+
+    case 'SAVE_COMPONENT': {
+      if (!state.currentTemplate) return state;
+      const saved: ComponentTemplate = {
+        ...state.currentTemplate,
+        name: action.name,
+        createdAt: Date.now(),
+      };
+      return {
+        ...state,
+        mode: 'project',
+        currentTemplate: null,
+        selectedBoxId: null,
+        componentLibrary: [saved, ...state.componentLibrary],
+      };
+    }
+
+    case 'CANCEL_COMPONENT_BUILDER':
+      return {
+        ...state,
+        mode: 'project',
+        currentTemplate: null,
+        selectedBoxId: null,
+      };
+
+    case 'PLACE_COMPONENT': {
+      const newBoxes = placeComponentBoxes(action.template, state.project.boxes);
+      return {
+        ...state,
+        project: {
+          ...state.project,
+          boxes: [...state.project.boxes, ...newBoxes],
+        },
+      };
+    }
+
+    case 'LOAD_COMPONENTS':
+      return { ...state, componentLibrary: action.components };
+
+    case 'DELETE_COMPONENT':
+      return {
+        ...state,
+        componentLibrary: state.componentLibrary.filter((c) => c.id !== action.id),
+      };
+
     default:
       return state;
   }
@@ -104,6 +186,11 @@ interface ProjectContextValue {
   setUnitSystem: (unitSystem: UnitSystem) => void;
   setProjectName: (name: string) => void;
   getSelectedBox: () => Box | undefined;
+  startComponentBuilder: () => void;
+  saveComponent: (name: string) => void;
+  cancelComponentBuilder: () => void;
+  placeComponent: (template: ComponentTemplate) => void;
+  deleteComponentTemplate: (id: string) => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
@@ -113,20 +200,26 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     project: createDefaultProject(),
     selectedBoxId: null,
     isLoading: true,
+    mode: 'project',
+    currentTemplate: null,
+    componentLibrary: [],
   });
 
-  // Load project from IndexedDB on mount
+  // Load project and components from IndexedDB on mount
   useEffect(() => {
-    loadDefaultProject().then((saved) => {
-      if (saved) {
-        dispatch({ type: 'SET_PROJECT', project: saved });
-      } else {
-        dispatch({ type: 'SET_LOADING', isLoading: false });
+    Promise.all([loadDefaultProject(), getAllComponents()]).then(
+      ([saved, components]) => {
+        if (saved) {
+          dispatch({ type: 'SET_PROJECT', project: saved });
+        } else {
+          dispatch({ type: 'SET_LOADING', isLoading: false });
+        }
+        dispatch({ type: 'LOAD_COMPONENTS', components });
       }
-    });
+    );
   }, []);
 
-  // Auto-save on changes
+  // Auto-save project on changes
   useEffect(() => {
     if (!state.isLoading) {
       saveProject(state.project);
@@ -134,7 +227,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, [state.project, state.isLoading]);
 
   const addBox = useCallback((materialId?: string) => {
-    const boxes = state.project.boxes;
+    const boxes = getActiveBoxes(state);
 
     // Cycle through materials so each new box gets a different color
     if (!materialId) {
@@ -143,7 +236,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       for (const b of boxes) {
         usedCounts.set(b.materialId, (usedCounts.get(b.materialId) ?? 0) + 1);
       }
-      // Pick the material with the fewest existing boxes
       let minCount = Infinity;
       let picked = materialIds[0];
       for (const id of materialIds) {
@@ -160,7 +252,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     const defaultDim = { width: 1, height: 1, depth: 1 };
     let posX = 0;
     const posZ = 0;
-    const spacing = 0.25; // gap between boxes
+    const spacing = 0.25;
 
     const isOverlapping = (x: number, z: number) => {
       for (const b of boxes) {
@@ -191,7 +283,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     };
     dispatch({ type: 'ADD_BOX', box });
     dispatch({ type: 'SELECT_BOX', id: box.id });
-  }, [state.project.boxes]);
+  }, [state]);
 
   const updateBox = useCallback((id: string, updates: Partial<Box>) => {
     dispatch({ type: 'UPDATE_BOX', id, updates });
@@ -214,8 +306,37 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const getSelectedBox = useCallback(() => {
-    return state.project.boxes.find((box) => box.id === state.selectedBoxId);
-  }, [state.project.boxes, state.selectedBoxId]);
+    const boxes = getActiveBoxes(state);
+    return boxes.find((box) => box.id === state.selectedBoxId);
+  }, [state]);
+
+  const startComponentBuilder = useCallback(() => {
+    dispatch({ type: 'START_COMPONENT_BUILDER' });
+  }, []);
+
+  const saveComponentAction = useCallback((name: string) => {
+    if (!state.currentTemplate) return;
+    const template: ComponentTemplate = {
+      ...state.currentTemplate,
+      name,
+      createdAt: Date.now(),
+    };
+    saveComponentToDb(template);
+    dispatch({ type: 'SAVE_COMPONENT', name });
+  }, [state.currentTemplate]);
+
+  const cancelComponentBuilder = useCallback(() => {
+    dispatch({ type: 'CANCEL_COMPONENT_BUILDER' });
+  }, []);
+
+  const placeComponent = useCallback((template: ComponentTemplate) => {
+    dispatch({ type: 'PLACE_COMPONENT', template });
+  }, []);
+
+  const deleteComponentTemplate = useCallback((id: string) => {
+    deleteComponentFromDb(id);
+    dispatch({ type: 'DELETE_COMPONENT', id });
+  }, []);
 
   return (
     <ProjectContext.Provider
@@ -228,6 +349,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         setUnitSystem,
         setProjectName,
         getSelectedBox,
+        startComponentBuilder,
+        saveComponent: saveComponentAction,
+        cancelComponentBuilder,
+        placeComponent,
+        deleteComponentTemplate,
       }}
     >
       {children}

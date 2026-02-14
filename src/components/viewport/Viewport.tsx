@@ -43,11 +43,18 @@ export function Viewport() {
           <meshBasicMaterial transparent opacity={0} />
         </mesh>
 
-        {state.project.boxes.map((box) => (
+        {(state.mode === 'component-builder'
+          ? (state.currentTemplate?.boxes ?? [])
+          : state.project.boxes
+        ).map((box) => (
           <Box3D
             key={box.id}
             box={box}
-            allBoxes={state.project.boxes}
+            allBoxes={
+              state.mode === 'component-builder'
+                ? (state.currentTemplate?.boxes ?? [])
+                : state.project.boxes
+            }
             isSelected={box.id === state.selectedBoxId}
             onSelect={selectBox}
             onMove={handleMove}

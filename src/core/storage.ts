@@ -1,12 +1,18 @@
 import Dexie, { type EntityTable } from 'dexie';
-import { Project } from '../types';
+import { Project, ComponentTemplate } from '../types';
 
 const db = new Dexie('OpenCAD') as Dexie & {
   projects: EntityTable<Project, 'id'>;
+  components: EntityTable<ComponentTemplate, 'id'>;
 };
 
 db.version(1).stores({
   projects: 'id, name',
+});
+
+db.version(2).stores({
+  projects: 'id, name',
+  components: 'id, name, createdAt',
 });
 
 export async function saveProject(project: Project): Promise<void> {
@@ -28,6 +34,18 @@ export async function deleteProject(id: string): Promise<void> {
 
 export async function getAllProjects(): Promise<Project[]> {
   return db.projects.toArray();
+}
+
+export async function saveComponent(component: ComponentTemplate): Promise<void> {
+  await db.components.put(component);
+}
+
+export async function getAllComponents(): Promise<ComponentTemplate[]> {
+  return db.components.orderBy('createdAt').reverse().toArray();
+}
+
+export async function deleteComponent(id: string): Promise<void> {
+  await db.components.delete(id);
 }
 
 export { db };
