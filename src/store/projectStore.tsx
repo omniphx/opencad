@@ -15,8 +15,9 @@ import {
   getAllComponents,
   deleteComponent as deleteComponentFromDb,
 } from '../core/storage';
-import { DEFAULT_MATERIALS } from '../core/materials';
+import { DEFAULT_MATERIALS, getMaterialById } from '../core/materials';
 import { placeComponentBoxes } from '../core/placement';
+import { normalizeUnitSystem } from '../core/units';
 
 interface ProjectState {
   project: Project;
@@ -47,7 +48,7 @@ function createDefaultProject(): Project {
   return {
     id: uuid(),
     name: 'Sauna Project',
-    unitSystem: 'imperial',
+    unitSystem: 'feet',
     boxes: [],
   };
 }
@@ -210,6 +211,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     Promise.all([loadDefaultProject(), getAllComponents()]).then(
       ([saved, components]) => {
         if (saved) {
+          // Normalize legacy unit system values (e.g. 'imperial' → 'feet')
+          saved.unitSystem = normalizeUnitSystem(saved.unitSystem);
           dispatch({ type: 'SET_PROJECT', project: saved });
         } else {
           dispatch({ type: 'SET_LOADING', isLoading: false });
@@ -248,8 +251,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       materialId = picked;
     }
 
-    // Find a non-overlapping position by scanning along the X axis
-    const defaultDim = { width: 1, height: 1, depth: 1 };
+    // Use material's actual dimensions if available
+    const material = getMaterialById(materialId);
+    const defaultDim = material?.defaultDimensions ?? { width: 1, height: 1, depth: 1 };
     let posX = 0;
     const posZ = 0;
     const spacing = 0.25;
@@ -276,7 +280,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
     const box: Box = {
       id: uuid(),
-      position: { x: posX, y: 0.5, z: posZ },
+      position: { x: posX, y: defaultDim.height / 2, z: posZ },
       dimensions: defaultDim,
       rotation: 0,
       materialId,

@@ -14,9 +14,10 @@ export interface Material {
   name: string;
   unitType: UnitType;
   color: string;
+  defaultDimensions?: { width: number; height: number; depth: number }; // meters
 }
 
-export type UnitSystem = 'imperial' | 'metric';
+export type UnitSystem = 'feet' | 'inches' | 'metric';
 
 export interface Project {
   id: string;

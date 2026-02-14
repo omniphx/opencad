@@ -5,21 +5,21 @@ const METERS_TO_INCHES = 39.3701;
 const METERS_TO_CM = 100;
 
 export function metersToDisplayUnit(meters: number, unitSystem: UnitSystem): number {
-  if (unitSystem === 'imperial') {
-    return meters * METERS_TO_FEET;
-  }
+  if (unitSystem === 'feet') return meters * METERS_TO_FEET;
+  if (unitSystem === 'inches') return meters * METERS_TO_INCHES;
   return meters * METERS_TO_CM;
 }
 
 export function displayUnitToMeters(value: number, unitSystem: UnitSystem): number {
-  if (unitSystem === 'imperial') {
-    return value / METERS_TO_FEET;
-  }
+  if (unitSystem === 'feet') return value / METERS_TO_FEET;
+  if (unitSystem === 'inches') return value / METERS_TO_INCHES;
   return value / METERS_TO_CM;
 }
 
 export function getDisplayUnitLabel(unitSystem: UnitSystem): string {
-  return unitSystem === 'imperial' ? 'ft' : 'cm';
+  if (unitSystem === 'feet') return 'ft';
+  if (unitSystem === 'inches') return 'in';
+  return 'cm';
 }
 
 export function metersToInches(meters: number): number {
@@ -60,4 +60,11 @@ export function calculateBoardFeet(widthM: number, heightM: number, depthM: numb
   const widthInches = metersToInches(dims[1]);
   const lengthFeet = metersToLinearFeet(dims[2]);
   return (thicknessInches * widthInches * lengthFeet) / 12;
+}
+
+/** Normalize legacy unit system values (e.g. 'imperial' from old saved projects) */
+export function normalizeUnitSystem(value: string): UnitSystem {
+  if (value === 'imperial') return 'feet';
+  if (value === 'feet' || value === 'inches' || value === 'metric') return value;
+  return 'feet';
 }
