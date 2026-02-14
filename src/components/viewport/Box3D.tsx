@@ -67,8 +67,8 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onMove }: Box3DProp
       intersectPoint
     );
 
-    const newX = Math.round((intersectPoint.x + dragOffset.x) * 4) / 4;
-    const newZ = Math.round((intersectPoint.z + dragOffset.z) * 4) / 4;
+    const newX = intersectPoint.x + dragOffset.x;
+    const newZ = intersectPoint.z + dragOffset.z;
 
     // Find the highest box we overlap on XZ and stack on top of it
     const halfW = box.dimensions.width / 2;
