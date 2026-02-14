@@ -47,6 +47,7 @@ export function Viewport() {
           <Box3D
             key={box.id}
             box={box}
+            allBoxes={state.project.boxes}
             isSelected={box.id === state.selectedBoxId}
             onSelect={selectBox}
             onMove={handleMove}

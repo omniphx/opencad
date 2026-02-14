@@ -6,15 +6,17 @@ import { getMaterialColor } from '../../core/materials';
 
 interface Box3DProps {
   box: Box;
+  allBoxes: Box[];
   isSelected: boolean;
   onSelect: (id: string) => void;
   onMove: (id: string, position: { x: number; y: number; z: number }) => void;
 }
 
-export function Box3D({ box, isSelected, onSelect, onMove }: Box3DProps) {
+export function Box3D({ box, allBoxes, isSelected, onSelect, onMove }: Box3DProps) {
   const meshRef = useRef<Mesh>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(new Vector3());
+  const dragPlaneY = useRef(0);
   const { camera, raycaster, pointer } = useThree();
 
   const color = getMaterialColor(box.materialId);
@@ -31,14 +33,14 @@ export function Box3D({ box, isSelected, onSelect, onMove }: Box3DProps) {
     e.stopPropagation();
     onSelect(box.id);
 
-    // Calculate offset for dragging
-    const groundPlane = new Vector3(0, 1, 0);
-    const planePoint = new Vector3(0, box.position.y, 0);
+    // Lock drag plane to current Y so stacking doesn't shift the plane
+    dragPlaneY.current = box.position.y;
 
+    const groundPlane = new Vector3(0, 1, 0);
     raycaster.setFromCamera(pointer, camera);
     const intersectPoint = new Vector3();
     raycaster.ray.intersectPlane(
-      { normal: groundPlane, constant: -planePoint.y } as never,
+      { normal: groundPlane, constant: -dragPlaneY.current } as never,
       intersectPoint
     );
 
@@ -58,22 +60,37 @@ export function Box3D({ box, isSelected, onSelect, onMove }: Box3DProps) {
     e.stopPropagation();
 
     const groundPlane = new Vector3(0, 1, 0);
-    const planePoint = new Vector3(0, box.position.y, 0);
-
     raycaster.setFromCamera(pointer, camera);
     const intersectPoint = new Vector3();
     raycaster.ray.intersectPlane(
-      { normal: groundPlane, constant: -planePoint.y } as never,
+      { normal: groundPlane, constant: -dragPlaneY.current } as never,
       intersectPoint
     );
 
-    const newX = intersectPoint.x + dragOffset.x;
-    const newZ = intersectPoint.z + dragOffset.z;
+    const newX = Math.round((intersectPoint.x + dragOffset.x) * 4) / 4;
+    const newZ = Math.round((intersectPoint.z + dragOffset.z) * 4) / 4;
+
+    // Find the highest box we overlap on XZ and stack on top of it
+    const halfW = box.dimensions.width / 2;
+    const halfD = box.dimensions.depth / 2;
+    let stackY = 0; // ground level
+
+    for (const other of allBoxes) {
+      if (other.id === box.id) continue;
+      const oHalfW = other.dimensions.width / 2;
+      const oHalfD = other.dimensions.depth / 2;
+      const overlapX = Math.abs(newX - other.position.x) < halfW + oHalfW;
+      const overlapZ = Math.abs(newZ - other.position.z) < halfD + oHalfD;
+      if (overlapX && overlapZ) {
+        const otherTop = other.position.y + other.dimensions.height / 2;
+        if (otherTop > stackY) stackY = otherTop;
+      }
+    }
 
     onMove(box.id, {
-      x: Math.round(newX * 4) / 4, // Snap to 0.25m grid
-      y: box.position.y,
-      z: Math.round(newZ * 4) / 4,
+      x: newX,
+      y: stackY + box.dimensions.height / 2,
+      z: newZ,
     });
   };
 
