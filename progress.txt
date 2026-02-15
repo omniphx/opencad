@@ -1,0 +1,52 @@
+## Codebase Patterns
+- Marquee selection uses a 2D HTML overlay div over the R3F Canvas; camera is exposed via CameraExposer component + ref
+- Box screen positions computed with Vector3.project(camera) then mapped to container-relative coords
+- Selection state uses `selectedBoxIds: string[]` array (not single ID) — always use `selectBoxes([id])` for single select, `selectBoxes([])` to deselect
+- Clipboard is `Box[] | null` — always store/paste arrays, even for single items
+- State management is in `src/store/projectStore.tsx` using React Context + useReducer pattern
+- `getActiveBoxes(state)` returns boxes from either project or component-builder mode
+- `setActiveBoxes(state, boxes)` sets boxes in the correct mode context
+- Box position is corner-based (bottom-left-front), not center-based
+- `findNonOverlappingPosition` used for duplicate/paste positioning
+- ESLint config is not set up (v9 migration needed), so `npm run lint` fails — use `npm run build` for quality checks (includes tsc)
+
+---
+
+## 2026-02-14 - US-003
+- What was implemented: Marquee (box) selection overlay for multi-selecting boxes by dragging on empty viewport area
+- Files changed:
+  - src/components/viewport/Viewport.tsx - Added CameraExposer component, marquee state/handlers, 2D overlay div, screen-space hit testing
+- **Learnings for future iterations:**
+  - CameraExposer component shares the R3F camera via a ref to code outside the Canvas
+  - Box center is projected to screen space using Vector3.project(camera), then mapped to container-relative pixel coords
+  - DRAG_THRESHOLD (5px) differentiates click-to-deselect from marquee drag
+  - marqueeActive ref prevents background click handler from deselecting when marquee completes
+  - Shift+marquee toggles boxes in/out of existing selection (XOR behavior)
+  - OrbitControls with enableRotate=false doesn't conflict with left-click marquee (left button still mapped to rotate, which is a no-op)
+---
+
+## 2026-02-14 - US-002
+- What was implemented: Added Shift+Click multi-select behavior to Box3D component
+- Files changed:
+  - src/components/viewport/Box3D.tsx - Added `onToggleSelect` prop, checks `e.shiftKey` in handlePointerDown to toggle vs replace selection
+  - src/components/viewport/Viewport.tsx - Passes `toggleBoxSelection` from store as `onToggleSelect` prop to Box3D
+- **Learnings for future iterations:**
+  - ThreeEvent<PointerEvent> has `shiftKey` property just like native PointerEvent
+  - Box3D uses `onSelect` for replace-selection and `onToggleSelect` for add/remove from selection
+---
+
+## 2026-02-14 - US-001
+- What was implemented: Refactored selection model from single selectedBoxId to selectedBoxIds array
+- Files changed:
+  - src/store/projectStore.tsx - Changed state, actions, reducer, and context API
+  - src/hooks/useSelection.ts - Updated to expose selectedBoxIds, selectedBoxes, selectBoxes, toggleBoxSelection, deselectAll
+  - src/components/viewport/Viewport.tsx - Updated selection props passed to Box3D
+  - src/components/layout/PropertiesPanel.tsx - Added multi-select summary view (count + bulk actions)
+  - src/components/layout/BOMPanel.tsx - Updated highlight to use selectedBoxIds.includes
+  - src/App.tsx - Updated keyboard shortcuts to use new multi-select APIs
+- **Learnings for future iterations:**
+  - The old `selectBox(null)` pattern becomes `selectBoxes([])`
+  - PropertiesPanel shows full editor for single selection, summary for multi-select
+  - Delete/Duplicate/Copy/Paste all operate on the full selectedBoxIds array now
+  - Box3D component is not changed in this story — it still receives `isSelected` boolean prop
+---
