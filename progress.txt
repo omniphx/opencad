@@ -1,6 +1,6 @@
 ## Codebase Patterns
 - Marquee selection uses a 2D HTML overlay div over the R3F Canvas; camera is exposed via CameraExposer component + ref
-- Box screen positions computed with Vector3.project(camera) then mapped to container-relative coords
+- `getBoxScreenBounds()` projects all 8 corners of a box to screen space, returns { left, top, right, bottom } AABB; marquee uses AABB intersection
 - Selection state uses `selectedBoxIds: string[]` array (not single ID) — always use `selectBoxes([id])` for single select, `selectBoxes([])` to deselect
 - Clipboard is `Box[] | null` — always store/paste arrays, even for single items
 - State management is in `src/store/projectStore.tsx` using React Context + useReducer pattern
@@ -59,4 +59,16 @@
 - Files changed: `src/components/viewport/Box3D.tsx`
 - **Learnings for future iterations:**
   - Both auto-stacking loops (single and multi) are now removed. No more auto-stacking in drag handlers.
+---
+
+## 2026-02-15 - US-004 & US-005
+- Implemented: Created `getBoxScreenBounds()` function and updated marquee hit testing to use AABB intersection
+- `getBoxScreenBounds()` projects all 8 corners of a box's 3D bounding box to screen space and returns axis-aligned bounding rect
+- Replaced center-point containment check with AABB intersection: `marquee.left <= box.right AND marquee.right >= box.left AND marquee.top <= box.bottom AND marquee.bottom >= box.top`
+- Removed old `getBoxScreenPosition()` function (no longer needed)
+- Files changed: `src/components/viewport/Viewport.tsx`
+- **Learnings for future iterations:**
+  - R3F WebGL interactions (pointer events, raycasting) don't work in headless Chrome — can't fully test marquee/click selection via Playwright
+  - `getBoxScreenBounds` uses the same projection technique as the old `getBoxScreenPosition` but for all 8 corners instead of just the center
+  - Shift+marquee toggle logic is unchanged — it uses a Set to add/remove from current selection
 ---

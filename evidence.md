@@ -28,3 +28,18 @@
 **Verification:**
 1. `npm run build` passes (TypeScript check + production build)
 2. Browser verification: App loads correctly
+
+## US-004 & US-005: Marquee bounding box projection and AABB intersection
+
+**Date:** 2026-02-15
+
+**Change:** Created `getBoxScreenBounds()` function that projects all 8 corners of a box to screen space, returning an axis-aligned bounding rectangle. Updated marquee hit testing to use AABB intersection instead of center-point containment. Removed the old `getBoxScreenPosition()` function.
+
+**Code Change:**
+- Added `getBoxScreenBounds()` function in `Viewport.tsx`
+- Replaced center-point check in `handleMarqueeMouseUp` with AABB intersection
+- Removed `getBoxScreenPosition()` function
+
+**Verification:**
+1. `npm run build` passes (TypeScript check + production build)
+2. Browser verification: App loads correctly. R3F pointer events don't work in headless Chrome so full interactive marquee testing not possible via Playwright.

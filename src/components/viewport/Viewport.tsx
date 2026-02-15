@@ -38,22 +38,41 @@ function getMarqueeBounds(marquee: MarqueeRect) {
   };
 }
 
-function getBoxScreenPosition(
+
+function getBoxScreenBounds(
   box: Box,
   camera: OrthographicCamera,
   container: HTMLElement
-): { x: number; y: number } {
-  const center = new Vector3(
-    box.position.x + box.dimensions.width / 2,
-    box.position.y + box.dimensions.height / 2,
-    box.position.z + box.dimensions.depth / 2
-  );
-  center.project(camera);
+): { left: number; top: number; right: number; bottom: number } {
   const rect = container.getBoundingClientRect();
-  return {
-    x: ((center.x + 1) / 2) * rect.width,
-    y: ((-center.y + 1) / 2) * rect.height,
-  };
+  const { x: px, y: py, z: pz } = box.position;
+  const { width: w, height: h, depth: d } = box.dimensions;
+
+  // Project all 8 corners of the box's bounding box
+  const corners = [
+    new Vector3(px, py, pz),
+    new Vector3(px + w, py, pz),
+    new Vector3(px, py + h, pz),
+    new Vector3(px + w, py + h, pz),
+    new Vector3(px, py, pz + d),
+    new Vector3(px + w, py, pz + d),
+    new Vector3(px, py + h, pz + d),
+    new Vector3(px + w, py + h, pz + d),
+  ];
+
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+
+  for (const corner of corners) {
+    corner.project(camera);
+    const sx = ((corner.x + 1) / 2) * rect.width;
+    const sy = ((-corner.y + 1) / 2) * rect.height;
+    if (sx < left) left = sx;
+    if (sx > right) right = sx;
+    if (sy < top) top = sy;
+    if (sy > bottom) bottom = sy;
+  }
+
+  return { left, top, right, bottom };
 }
 
 function TrackpadHandler({ controlsRef }: { controlsRef: React.RefObject<OrbitControlsImpl | null> }) {
@@ -179,12 +198,13 @@ export function Viewport() {
 
       const hitIds: string[] = [];
       for (const box of activeBoxes) {
-        const screenPos = getBoxScreenPosition(box, camera, container);
+        const boxBounds = getBoxScreenBounds(box, camera, container);
+        // AABB intersection test
         if (
-          screenPos.x >= bounds.left &&
-          screenPos.x <= bounds.right &&
-          screenPos.y >= bounds.top &&
-          screenPos.y <= bounds.bottom
+          bounds.left <= boxBounds.right &&
+          bounds.right >= boxBounds.left &&
+          bounds.top <= boxBounds.bottom &&
+          bounds.bottom >= boxBounds.top
         ) {
           hitIds.push(box.id);
         }
