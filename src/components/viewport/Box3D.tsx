@@ -8,17 +8,23 @@ interface Box3DProps {
   box: Box;
   allBoxes: Box[];
   isSelected: boolean;
+  selectedBoxIds: string[];
   onSelect: (id: string) => void;
   onToggleSelect: (id: string) => void;
   onMove: (id: string, position: { x: number; y: number; z: number }) => void;
+  onMoveSelected: (updates: Array<{ id: string; position: { x: number; y: number; z: number } }>) => void;
   snap: (v: number) => number;
 }
 
-export function Box3D({ box, allBoxes, isSelected, onSelect, onToggleSelect, onMove, snap }: Box3DProps) {
+export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, onSelect, onToggleSelect, onMove, onMoveSelected, snap }: Box3DProps) {
   const meshRef = useRef<Mesh>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(new Vector3());
   const dragPlaneY = useRef(0);
+  const dragStartPositions = useRef<Map<string, { x: number; y: number; z: number }>>(new Map());
+  const didDrag = useRef(false);
+  const wasMultiSelected = useRef(false);
+  const pointerDownShift = useRef(false);
   const { camera, raycaster, pointer } = useThree();
 
   const color = getMaterialColor(box.materialId);
@@ -35,7 +41,7 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onToggleSelect, onM
     e.stopPropagation();
     if (e.shiftKey) {
       onToggleSelect(box.id);
-    } else {
+    } else if (!isSelected) {
       onSelect(box.id);
     }
 
@@ -57,6 +63,24 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onToggleSelect, onM
         box.position.z - intersectPoint.z
       )
     );
+
+    // Track drag state for click-vs-drag detection
+    didDrag.current = false;
+    wasMultiSelected.current = isSelected && selectedBoxIds.length > 1;
+    pointerDownShift.current = e.shiftKey;
+
+    // Record initial positions of all selected boxes for multi-drag
+    const positions = new Map<string, { x: number; y: number; z: number }>();
+    const activeSelectedIds = isSelected || !e.shiftKey
+      ? (isSelected ? selectedBoxIds : [box.id])
+      : selectedBoxIds;
+    for (const b of allBoxes) {
+      if (activeSelectedIds.includes(b.id)) {
+        positions.set(b.id, { ...b.position });
+      }
+    }
+    dragStartPositions.current = positions;
+
     setIsDragging(true);
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   };
@@ -76,32 +100,72 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onToggleSelect, onM
     const newX = snap(intersectPoint.x + dragOffset.x);
     const newZ = snap(intersectPoint.z + dragOffset.z);
 
-    // Find the highest box we overlap on XZ and stack on top of it
-    // Position is the corner, so box extends from (x, y, z) to (x+w, y+h, z+d)
-    let stackY = 0; // ground level
+    didDrag.current = true;
+    const draggedStartPos = dragStartPositions.current.get(box.id);
+    const isMultiDrag = dragStartPositions.current.size > 1 && draggedStartPos;
 
-    for (const other of allBoxes) {
-      if (other.id === box.id) continue;
-      const overlapX =
-        newX < other.position.x + other.dimensions.width &&
-        other.position.x < newX + box.dimensions.width;
-      const overlapZ =
-        newZ < other.position.z + other.dimensions.depth &&
-        other.position.z < newZ + box.dimensions.depth;
-      if (overlapX && overlapZ) {
-        const otherTop = other.position.y + other.dimensions.height;
-        if (otherTop > stackY) stackY = otherTop;
+    if (isMultiDrag) {
+      // Compute delta from dragged box's start position
+      const deltaX = newX - draggedStartPos.x;
+      const deltaZ = newZ - draggedStartPos.z;
+
+      const draggedIds = new Set(dragStartPositions.current.keys());
+      const updates: Array<{ id: string; position: { x: number; y: number; z: number } }> = [];
+
+      for (const [id, startPos] of dragStartPositions.current) {
+        const movedX = startPos.x + deltaX;
+        const movedZ = startPos.z + deltaZ;
+
+        // Find stacking Y for each box, excluding other dragged boxes
+        let stackY = 0;
+        const movingBox = allBoxes.find((b) => b.id === id);
+        if (movingBox) {
+          for (const other of allBoxes) {
+            if (draggedIds.has(other.id)) continue;
+            const overlapX =
+              movedX < other.position.x + other.dimensions.width &&
+              other.position.x < movedX + movingBox.dimensions.width;
+            const overlapZ =
+              movedZ < other.position.z + other.dimensions.depth &&
+              other.position.z < movedZ + movingBox.dimensions.depth;
+            if (overlapX && overlapZ) {
+              const otherTop = other.position.y + other.dimensions.height;
+              if (otherTop > stackY) stackY = otherTop;
+            }
+          }
+        }
+
+        updates.push({ id, position: { x: movedX, y: stackY, z: movedZ } });
       }
-    }
 
-    onMove(box.id, {
-      x: newX,
-      y: stackY,
-      z: newZ,
-    });
+      onMoveSelected(updates);
+    } else {
+      // Single box drag — original behavior
+      let stackY = 0;
+      for (const other of allBoxes) {
+        if (other.id === box.id) continue;
+        const overlapX =
+          newX < other.position.x + other.dimensions.width &&
+          other.position.x < newX + box.dimensions.width;
+        const overlapZ =
+          newZ < other.position.z + other.dimensions.depth &&
+          other.position.z < newZ + box.dimensions.depth;
+        if (overlapX && overlapZ) {
+          const otherTop = other.position.y + other.dimensions.height;
+          if (otherTop > stackY) stackY = otherTop;
+        }
+      }
+
+      onMove(box.id, { x: newX, y: stackY, z: newZ });
+    }
   };
 
   const handlePointerUp = () => {
+    // If we clicked on an already-selected box in a multi-selection without dragging,
+    // replace the selection with just this box (standard click behavior)
+    if (!didDrag.current && wasMultiSelected.current && !pointerDownShift.current) {
+      onSelect(box.id);
+    }
     setIsDragging(false);
   };
 

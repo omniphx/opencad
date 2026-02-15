@@ -112,6 +112,12 @@ export function Viewport() {
     updateBox(id, { position });
   };
 
+  const handleMoveSelected = (updates: Array<{ id: string; position: { x: number; y: number; z: number } }>) => {
+    for (const { id, position } of updates) {
+      updateBox(id, { position });
+    }
+  };
+
   const snap = useCallback(
     (v: number) => state.snapEnabled ? snapToGrid(v, state.project.unitSystem) : v,
     [state.project.unitSystem, state.snapEnabled]
@@ -258,9 +264,11 @@ export function Viewport() {
             box={box}
             allBoxes={activeBoxes}
             isSelected={state.selectedBoxIds.includes(box.id)}
+            selectedBoxIds={state.selectedBoxIds}
             onSelect={(id: string) => selectBoxes([id])}
             onToggleSelect={(id: string) => toggleBoxSelection(id)}
             onMove={handleMove}
+            onMoveSelected={handleMoveSelected}
             snap={snap}
           />
         ))}
