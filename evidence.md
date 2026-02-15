@@ -120,3 +120,16 @@
 **Verification:**
 1. `npm run build` passes (TypeScript check + production build)
 2. Browser verification: App loads correctly
+
+## US-011: Add keyboard shortcuts for group and ungroup
+
+**Date:** 2026-02-14
+
+**Change:** Added Cmd+G (group) and Cmd+Shift+G (ungroup) keyboard shortcuts to App.tsx alongside existing shortcuts.
+
+**Code Changes:**
+- `src/App.tsx`: Added `groupSelectedBoxes` and `ungroupSelectedBoxes` to store destructuring; added `e.key === 'g'` handlers (shift+g for ungroup checked first); added to useEffect dependencies
+
+**Verification:**
+1. `npm run build` passes (TypeScript check + production build)
+2. Shortcuts guard: `groupSelectedBoxes` requires 2+ selected (built into store), `ungroupSelectedBoxes` requires 1+ selected (built into store)

@@ -132,3 +132,10 @@
   - When dispatching multiple UPDATE_BOX calls that should undo as one step, wrap in historyBatchStart/End
   - User-facing axes differ from internal: User X = internal Z, User Y = internal X, User Z = internal Y
 ---
+
+## 2026-02-14 - US-011
+- Implemented: Added Cmd+G (group) and Cmd+Shift+G (ungroup) keyboard shortcuts in App.tsx
+- Shift+G must be checked before G since both have `e.key === 'g'`
+- Store functions `groupSelectedBoxes`/`ungroupSelectedBoxes` already guard against invalid state (< 2 selected for group, 0 selected for ungroup)
+- Files changed: `src/App.tsx`
+---

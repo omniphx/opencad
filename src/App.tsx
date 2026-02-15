@@ -8,7 +8,7 @@ import { ComponentLibraryPanel } from './components/layout/ComponentLibraryPanel
 import { Toast } from './components/ui/Toast';
 
 function AppContent() {
-  const { state, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes, dismissToast, undo, redo, canUndo, canRedo } = useProjectStore();
+  const { state, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes, dismissToast, undo, redo, canUndo, canRedo, groupSelectedBoxes, ungroupSelectedBoxes } = useProjectStore();
   const [showComponentLibrary, setShowComponentLibrary] = useState(false);
 
   useEffect(() => {
@@ -33,6 +33,12 @@ function AppContent() {
         } else if (e.key === 'd' && state.selectedBoxIds.length > 0) {
           e.preventDefault();
           duplicateSelectedBoxes();
+        } else if (e.key === 'g' && e.shiftKey) {
+          e.preventDefault();
+          ungroupSelectedBoxes();
+        } else if (e.key === 'g') {
+          e.preventDefault();
+          groupSelectedBoxes();
         }
       }
 
@@ -43,7 +49,7 @@ function AppContent() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.selectedBoxIds, state.clipboard, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes, undo, redo, canUndo, canRedo]);
+  }, [state.selectedBoxIds, state.clipboard, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes, undo, redo, canUndo, canRedo, groupSelectedBoxes, ungroupSelectedBoxes]);
 
   const isBuilderMode = state.mode === 'component-builder';
 
