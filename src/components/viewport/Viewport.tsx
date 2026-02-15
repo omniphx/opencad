@@ -250,7 +250,7 @@ export function Viewport() {
         <directionalLight position={[5, 12, 8]} intensity={1} />
         <directionalLight position={[-8, 6, -3]} intensity={0.25} />
 
-        <Grid />
+        <Grid unitSystem={state.project.unitSystem} />
 
         <mesh
           position={[0, -0.01, 0]}
