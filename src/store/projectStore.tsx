@@ -45,6 +45,7 @@ type ProjectAction =
   | { type: "SET_UNIT_SYSTEM"; unitSystem: UnitSystem }
   | { type: "SET_PROJECT_NAME"; name: string }
   | { type: "START_COMPONENT_BUILDER" }
+  | { type: "EDIT_COMPONENT"; template: ComponentTemplate }
   | { type: "SAVE_COMPONENT"; name: string }
   | { type: "CANCEL_COMPONENT_BUILDER" }
   | { type: "PLACE_COMPONENT"; template: ComponentTemplate }
@@ -187,6 +188,17 @@ function projectReducer(
         },
       };
 
+    case "EDIT_COMPONENT":
+      return {
+        ...state,
+        mode: "component-builder",
+        selectedBoxIds: [],
+        currentTemplate: {
+          ...action.template,
+          boxes: action.template.boxes.map((b) => ({ ...b })),
+        },
+      };
+
     case "SAVE_COMPONENT": {
       if (!state.currentTemplate) return state;
       const saved: ComponentTemplate = {
@@ -194,12 +206,19 @@ function projectReducer(
         name: action.name,
         createdAt: Date.now(),
       };
+      const existingIndex = state.componentLibrary.findIndex(
+        (c) => c.id === saved.id,
+      );
+      const updatedLibrary =
+        existingIndex >= 0
+          ? state.componentLibrary.map((c) => (c.id === saved.id ? saved : c))
+          : [saved, ...state.componentLibrary];
       return {
         ...state,
         mode: "project",
         currentTemplate: null,
         selectedBoxIds: [],
-        componentLibrary: [saved, ...state.componentLibrary],
+        componentLibrary: updatedLibrary,
       };
     }
 
@@ -425,7 +444,9 @@ interface ProjectContextValue {
   copySelectedBoxes: () => void;
   pasteBoxes: () => void;
   startComponentBuilder: () => void;
+  editComponent: (template: ComponentTemplate) => void;
   saveComponent: (name: string) => void;
+  createComponentFromSelected: (name: string) => void;
   cancelComponentBuilder: () => void;
   placeComponent: (template: ComponentTemplate) => void;
   deleteComponentTemplate: (id: string) => void;
@@ -705,6 +726,46 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "START_COMPONENT_BUILDER" });
   }, []);
 
+  const editComponent = useCallback((template: ComponentTemplate) => {
+    dispatch({ type: "EDIT_COMPONENT", template });
+  }, []);
+
+  const createComponentFromSelected = useCallback(
+    (name: string) => {
+      if (state.selectedBoxIds.length === 0) return;
+      const trimmed = name.trim() || "Untitled Component";
+
+      // Build the template here so we can persist it
+      const selectedBoxes = state.project.boxes.filter((b) =>
+        state.selectedBoxIds.includes(b.id),
+      );
+      let minX = Infinity, minY = Infinity, minZ = Infinity;
+      for (const b of selectedBoxes) {
+        minX = Math.min(minX, b.position.x);
+        minY = Math.min(minY, b.position.y);
+        minZ = Math.min(minZ, b.position.z);
+      }
+      const templateBoxes = selectedBoxes.map((b) => ({
+        ...b,
+        position: {
+          x: b.position.x - minX,
+          y: b.position.y - minY,
+          z: b.position.z - minZ,
+        },
+      }));
+      const template: ComponentTemplate = {
+        id: uuid(),
+        name: trimmed,
+        boxes: templateBoxes,
+        createdAt: Date.now(),
+      };
+      saveComponentToDb(template);
+      dispatch({ type: "LOAD_COMPONENTS", components: [template, ...state.componentLibrary] });
+      dispatch({ type: "SELECT_BOXES", ids: [] });
+    },
+    [state.selectedBoxIds, state.project.boxes, state.componentLibrary],
+  );
+
   const saveComponentAction = useCallback(
     (name: string) => {
       if (!state.currentTemplate) return;
@@ -800,7 +861,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         copySelectedBoxes,
         pasteBoxes,
         startComponentBuilder,
+        editComponent,
         saveComponent: saveComponentAction,
+        createComponentFromSelected,
         cancelComponentBuilder,
         placeComponent,
         deleteComponentTemplate,

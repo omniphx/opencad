@@ -17,11 +17,18 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary }: Tool
   const canUngroup = selectedBoxes.length > 0 && selectedBoxes.some((b) => b.groupId);
   const hasSelection = selectedBoxes.length > 0;
   const allLocked = hasSelection && selectedBoxes.every((b) => b.locked);
-  const [componentName, setComponentName] = useState('');
+  const [componentName, setComponentName] = useState(state.currentTemplate?.name ?? '');
   const [showMaterialMenu, setShowMaterialMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isBuilderMode = state.mode === 'component-builder';
+
+  // Sync component name when entering builder mode (e.g. editing existing template)
+  useEffect(() => {
+    if (isBuilderMode) {
+      setComponentName(state.currentTemplate?.name ?? '');
+    }
+  }, [isBuilderMode]);
 
   // Close menu on outside click
   useEffect(() => {

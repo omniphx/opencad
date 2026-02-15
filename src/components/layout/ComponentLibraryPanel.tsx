@@ -1,7 +1,7 @@
 import { useProjectStore } from '../../store/projectStore';
 
 export function ComponentLibraryPanel() {
-  const { state, startComponentBuilder, placeComponent, deleteComponentTemplate } =
+  const { state, startComponentBuilder, editComponent, placeComponent, deleteComponentTemplate } =
     useProjectStore();
 
   return (
@@ -40,6 +40,12 @@ export function ComponentLibraryPanel() {
                   className="flex-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-lg transition-colors"
                 >
                   Place
+                </button>
+                <button
+                  onClick={() => editComponent(template)}
+                  className="px-3 py-1.5 bg-slate-500 hover:bg-slate-600 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  Edit
                 </button>
                 <button
                   onClick={() => deleteComponentTemplate(template.id)}

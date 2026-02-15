@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useSelection } from '../../hooks/useSelection';
 import { useProject } from '../../hooks/useProject';
 import { useProjectStore } from '../../store/projectStore';
@@ -7,8 +8,10 @@ import { getMaterialById } from '../../core/materials';
 
 export function PropertiesPanel() {
   const { selectedBox, selectedBoxIds, updateBox, deleteBox } = useSelection();
-  const { duplicateSelectedBoxes, deleteSelectedBoxes, toggleLockSelectedBoxes, getSelectedBoxes, historyBatchStart, historyBatchEnd } = useProjectStore();
+  const { duplicateSelectedBoxes, deleteSelectedBoxes, toggleLockSelectedBoxes, getSelectedBoxes, createComponentFromSelected, historyBatchStart, historyBatchEnd } = useProjectStore();
   const { project } = useProject();
+  const [showSaveComponent, setShowSaveComponent] = useState(false);
+  const [componentName, setComponentName] = useState('');
 
   if (selectedBoxIds.length === 0) {
     return null;
@@ -43,6 +46,57 @@ export function PropertiesPanel() {
           >
             Delete All
           </button>
+          <div className="h-px bg-slate-200 my-1" />
+          {showSaveComponent ? (
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={componentName}
+                onChange={(e) => setComponentName(e.target.value)}
+                placeholder="Component name..."
+                autoFocus
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    createComponentFromSelected(componentName);
+                    setShowSaveComponent(false);
+                    setComponentName('');
+                  } else if (e.key === 'Escape') {
+                    setShowSaveComponent(false);
+                    setComponentName('');
+                  }
+                }}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    createComponentFromSelected(componentName);
+                    setShowSaveComponent(false);
+                    setComponentName('');
+                  }}
+                  className="flex-1 px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSaveComponent(false);
+                    setComponentName('');
+                  }}
+                  className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowSaveComponent(true)}
+              className="w-full px-4 py-2 bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+            >
+              Save as Component
+            </button>
+          )}
         </div>
       </div>
     );
