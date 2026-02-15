@@ -107,3 +107,16 @@
 1. `npm run build` passes (TypeScript check + production build)
 2. Browser verification: App loads correctly
 3. Note: R3F drag interactions can't be tested in headless Chrome
+
+## US-010: Properties panel position changes apply to group
+
+**Date:** 2026-02-14
+
+**Change:** Modified `handleUserPositionChange` in PropertiesPanel.tsx to apply position delta to all group members when the selected box is grouped. When there are group members to update, the changes are wrapped in a history batch so all updates undo as one step.
+
+**Code Changes:**
+- `src/components/layout/PropertiesPanel.tsx`: Refactored `handleUserPositionChange` to compute delta and apply to group members; added `historyBatchStart`/`historyBatchEnd` wrapping for grouped updates
+
+**Verification:**
+1. `npm run build` passes (TypeScript check + production build)
+2. Browser verification: App loads correctly

@@ -7,7 +7,7 @@ import { getMaterialById } from '../../core/materials';
 
 export function PropertiesPanel() {
   const { selectedBox, selectedBoxIds, updateBox, deleteBox } = useSelection();
-  const { duplicateSelectedBoxes, deleteSelectedBoxes, toggleLockSelectedBoxes, getSelectedBoxes } = useProjectStore();
+  const { duplicateSelectedBoxes, deleteSelectedBoxes, toggleLockSelectedBoxes, getSelectedBoxes, historyBatchStart, historyBatchEnd } = useProjectStore();
   const { project } = useProject();
 
   if (selectedBoxIds.length === 0) {
@@ -66,12 +66,26 @@ export function PropertiesPanel() {
   // User Y (forward-back on ground) = Three.js X
   // User Z (height) = Three.js Y
   const handleUserPositionChange = (userAxis: 'x' | 'y' | 'z', value: number) => {
-    if (userAxis === 'x') {
-      updateBox(selectedBox.id, { position: { ...selectedBox.position, z: value } });
-    } else if (userAxis === 'y') {
-      updateBox(selectedBox.id, { position: { ...selectedBox.position, x: value } });
-    } else {
-      updateBox(selectedBox.id, { position: { ...selectedBox.position, y: value } });
+    const internalAxis: 'x' | 'y' | 'z' = userAxis === 'x' ? 'z' : userAxis === 'y' ? 'x' : 'y';
+    const oldValue = selectedBox.position[internalAxis];
+    const delta = value - oldValue;
+
+    // If grouped, batch all updates so they undo as one step
+    const hasGroupMembers = selectedBox.groupId && delta !== 0;
+    if (hasGroupMembers) historyBatchStart();
+
+    updateBox(selectedBox.id, { position: { ...selectedBox.position, [internalAxis]: value } });
+
+    // If grouped, apply the same delta to all other group members
+    if (hasGroupMembers) {
+      for (const b of project.boxes) {
+        if (b.groupId === selectedBox.groupId && b.id !== selectedBox.id) {
+          updateBox(b.id, {
+            position: { ...b.position, [internalAxis]: b.position[internalAxis] + delta },
+          });
+        }
+      }
+      historyBatchEnd();
     }
   };
 

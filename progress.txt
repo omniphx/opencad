@@ -120,3 +120,15 @@
   - The multi-drag system already handles moving multiple boxes via delta from the dragged box's start position — adding group members to `dragStartPositions` is all that's needed
   - `groupMemberIds` is already computed at the component level from `allBoxes` with same `groupId`
 ---
+
+## 2026-02-14 - US-010
+- Implemented: Properties panel position changes now apply delta to entire group
+- `handleUserPositionChange` computes delta = newValue - oldValue for the internal axis
+- Iterates `project.boxes` to find group members with same `groupId`, applies delta to each
+- Wrapped in `historyBatchStart`/`historyBatchEnd` so multiple UPDATE_BOX dispatches collapse into one undo step
+- Dimension changes (width, height, depth) still only affect the individual box (unchanged)
+- Files changed: `src/components/layout/PropertiesPanel.tsx`
+- **Learnings for future iterations:**
+  - When dispatching multiple UPDATE_BOX calls that should undo as one step, wrap in historyBatchStart/End
+  - User-facing axes differ from internal: User X = internal Z, User Y = internal X, User Z = internal Y
+---
