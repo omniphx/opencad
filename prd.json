@@ -146,7 +146,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001. Add locked boolean to Box, add reducer action, add UI buttons and 3D overlay icon."
     },
     {
@@ -163,7 +163,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-008, US-004. Update Box3D drag handler to check locked flag and abort drag. Update delete handler to filter out locked boxes. Add a simple toast/notification component for warnings."
     },
     {
@@ -183,7 +183,7 @@
         "Typecheck passes"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "Modifies store/projectStore.tsx. Add history and historyIndex to state. Create a helper that wraps box-mutating actions to push snapshots. Expose undo/redo actions and canUndo/canRedo computed values."
     },
     {

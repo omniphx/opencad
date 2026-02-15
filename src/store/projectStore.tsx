@@ -29,6 +29,8 @@ interface ProjectState {
   clipboard: Box[] | null;
   snapEnabled: boolean;
   toastMessage: string | null;
+  history: Box[][];
+  historyIndex: number;
 }
 
 type ProjectAction =
@@ -56,7 +58,9 @@ type ProjectAction =
   | { type: 'UNGROUP_BOXES'; ids: string[] }
   | { type: 'TOGGLE_LOCK'; ids: string[] }
   | { type: 'SHOW_TOAST'; message: string }
-  | { type: 'DISMISS_TOAST' };
+  | { type: 'DISMISS_TOAST' }
+  | { type: 'UNDO' }
+  | { type: 'REDO' };
 
 function createDefaultProject(): Project {
   return {
@@ -88,8 +92,20 @@ function setActiveBoxes(state: ProjectState, boxes: Box[]): ProjectState {
 
 function projectReducer(state: ProjectState, action: ProjectAction): ProjectState {
   switch (action.type) {
-    case 'SET_PROJECT':
-      return { ...state, project: action.project, isLoading: false };
+    case 'SET_PROJECT': {
+      const snapshot = action.project.boxes.map((b) => ({
+        ...b,
+        position: { ...b.position },
+        dimensions: { ...b.dimensions },
+      }));
+      return {
+        ...state,
+        project: action.project,
+        isLoading: false,
+        history: [snapshot],
+        historyIndex: 0,
+      };
+    }
 
     case 'SET_LOADING':
       return { ...state, isLoading: action.isLoading };
@@ -243,6 +259,28 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
     case 'DISMISS_TOAST':
       return { ...state, toastMessage: null };
 
+    case 'UNDO': {
+      if (state.historyIndex <= 0) return state;
+      const newIndex = state.historyIndex - 1;
+      const boxes = state.history[newIndex].map((b) => ({ ...b }));
+      return {
+        ...setActiveBoxes(state, boxes),
+        historyIndex: newIndex,
+        selectedBoxIds: [],
+      };
+    }
+
+    case 'REDO': {
+      if (state.historyIndex >= state.history.length - 1) return state;
+      const newIndex = state.historyIndex + 1;
+      const boxes = state.history[newIndex].map((b) => ({ ...b }));
+      return {
+        ...setActiveBoxes(state, boxes),
+        historyIndex: newIndex,
+        selectedBoxIds: [],
+      };
+    }
+
     case 'COPY_BOXES':
       return { ...state, clipboard: action.boxes };
 
@@ -256,6 +294,43 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
     default:
       return state;
   }
+}
+
+// Actions that mutate boxes and should be tracked in undo history
+const BOX_MUTATING_ACTIONS = new Set<ProjectAction['type']>([
+  'ADD_BOX',
+  'DELETE_BOX',
+  'UPDATE_BOX',
+  'DUPLICATE_BOXES',
+  'PASTE_BOXES',
+  'DELETE_SELECTED_BOXES',
+  'GROUP_BOXES',
+  'UNGROUP_BOXES',
+  'TOGGLE_LOCK',
+  'PLACE_COMPONENT',
+]);
+
+function projectReducerWithHistory(state: ProjectState, action: ProjectAction): ProjectState {
+  const newState = projectReducer(state, action);
+
+  // Only track history for box-mutating actions, and only if boxes actually changed
+  if (BOX_MUTATING_ACTIONS.has(action.type)) {
+    const oldBoxes = getActiveBoxes(state);
+    const newBoxes = getActiveBoxes(newState);
+    if (oldBoxes !== newBoxes) {
+      // Deep clone for snapshot
+      const snapshot = newBoxes.map((b) => ({ ...b, position: { ...b.position }, dimensions: { ...b.dimensions } }));
+      // Truncate any redo history beyond current index
+      const history = [...state.history.slice(0, state.historyIndex + 1), snapshot];
+      return {
+        ...newState,
+        history,
+        historyIndex: history.length - 1,
+      };
+    }
+  }
+
+  return newState;
 }
 
 interface ProjectContextValue {
@@ -284,12 +359,16 @@ interface ProjectContextValue {
   toggleLockSelectedBoxes: () => void;
   showToast: (message: string) => void;
   dismissToast: () => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(projectReducer, {
+  const [state, dispatch] = useReducer(projectReducerWithHistory, {
     project: createDefaultProject(),
     selectedBoxIds: [],
     isLoading: true,
@@ -299,6 +378,8 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     clipboard: null,
     snapEnabled: true,
     toastMessage: null,
+    history: [[]],
+    historyIndex: 0,
   });
 
   // Load project and components from IndexedDB on mount
@@ -575,6 +656,17 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DISMISS_TOAST' });
   }, []);
 
+  const undo = useCallback(() => {
+    dispatch({ type: 'UNDO' });
+  }, []);
+
+  const redo = useCallback(() => {
+    dispatch({ type: 'REDO' });
+  }, []);
+
+  const canUndo = state.historyIndex > 0;
+  const canRedo = state.historyIndex < state.history.length - 1;
+
   return (
     <ProjectContext.Provider
       value={{
@@ -603,6 +695,10 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         toggleLockSelectedBoxes,
         showToast,
         dismissToast,
+        undo,
+        redo,
+        canUndo,
+        canRedo,
       }}
     >
       {children}
