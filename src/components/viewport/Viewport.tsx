@@ -52,7 +52,7 @@ function TrackpadHandler({ controlsRef }: { controlsRef: React.RefObject<OrbitCo
 }
 
 export function Viewport() {
-  const { state, selectBox, updateBox } = useProjectStore();
+  const { state, selectBoxes, updateBox } = useProjectStore();
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
   const handleMove = (id: string, position: { x: number; y: number; z: number }) => {
@@ -65,7 +65,7 @@ export function Viewport() {
   );
 
   const handleBackgroundClick = () => {
-    selectBox(null);
+    selectBoxes([]);
   };
 
   return (
@@ -112,8 +112,8 @@ export function Viewport() {
                 ? (state.currentTemplate?.boxes ?? [])
                 : state.project.boxes
             }
-            isSelected={box.id === state.selectedBoxId}
-            onSelect={selectBox}
+            isSelected={state.selectedBoxIds.includes(box.id)}
+            onSelect={(id: string) => selectBoxes([id])}
             onMove={handleMove}
             snap={snap}
           />

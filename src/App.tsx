@@ -7,7 +7,7 @@ import { BOMPanel } from './components/layout/BOMPanel';
 import { ComponentLibraryPanel } from './components/layout/ComponentLibraryPanel';
 
 function AppContent() {
-  const { state, copyBox, pasteBox, duplicateBox } = useProjectStore();
+  const { state, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes } = useProjectStore();
   const [showComponentLibrary, setShowComponentLibrary] = useState(false);
 
   useEffect(() => {
@@ -17,21 +17,26 @@ function AppContent() {
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
       if (e.metaKey || e.ctrlKey) {
-        if (e.key === 'c' && state.selectedBoxId) {
+        if (e.key === 'c' && state.selectedBoxIds.length > 0) {
           e.preventDefault();
-          copyBox(state.selectedBoxId);
-        } else if (e.key === 'v' && state.clipboard) {
+          copySelectedBoxes();
+        } else if (e.key === 'v' && state.clipboard && state.clipboard.length > 0) {
           e.preventDefault();
-          pasteBox();
-        } else if (e.key === 'd' && state.selectedBoxId) {
+          pasteBoxes();
+        } else if (e.key === 'd' && state.selectedBoxIds.length > 0) {
           e.preventDefault();
-          duplicateBox(state.selectedBoxId);
+          duplicateSelectedBoxes();
         }
+      }
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedBoxIds.length > 0) {
+        e.preventDefault();
+        deleteSelectedBoxes();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.selectedBoxId, state.clipboard, copyBox, pasteBox, duplicateBox]);
+  }, [state.selectedBoxIds, state.clipboard, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes]);
 
   const isBuilderMode = state.mode === 'component-builder';
 

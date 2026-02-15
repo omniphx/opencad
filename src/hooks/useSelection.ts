@@ -1,14 +1,16 @@
 import { useProjectStore } from '../store/projectStore';
 
 export function useSelection() {
-  const { state, selectBox, getSelectedBox, updateBox, deleteBox } = useProjectStore();
+  const { state, selectBoxes, toggleBoxSelection, getSelectedBox, getSelectedBoxes, updateBox, deleteBox } = useProjectStore();
 
   return {
-    selectedBoxId: state.selectedBoxId,
+    selectedBoxIds: state.selectedBoxIds,
+    selectedBoxes: getSelectedBoxes(),
     selectedBox: getSelectedBox(),
-    selectBox,
+    selectBoxes,
+    toggleBoxSelection,
     updateBox,
     deleteBox,
-    deselectAll: () => selectBox(null),
+    deselectAll: () => selectBoxes([]),
   };
 }

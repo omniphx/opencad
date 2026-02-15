@@ -6,10 +6,41 @@ import { MaterialPicker } from '../ui/MaterialPicker';
 import { getMaterialById } from '../../core/materials';
 
 export function PropertiesPanel() {
-  const { selectedBox, updateBox, deleteBox } = useSelection();
-  const { duplicateBox } = useProjectStore();
+  const { selectedBox, selectedBoxIds, updateBox, deleteBox } = useSelection();
+  const { duplicateSelectedBoxes, deleteSelectedBoxes } = useProjectStore();
   const { project } = useProject();
 
+  if (selectedBoxIds.length === 0) {
+    return null;
+  }
+
+  // Multi-select summary
+  if (selectedBoxIds.length > 1) {
+    return (
+      <div className="w-72 bg-white border-l border-slate-200 p-4 overflow-y-auto">
+        <h2 className="text-slate-800 font-semibold mb-4">Properties</h2>
+        <p className="text-slate-600 text-sm mb-4">
+          {selectedBoxIds.length} items selected
+        </p>
+        <div className="space-y-2">
+          <button
+            onClick={() => duplicateSelectedBoxes()}
+            className="w-full px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+          >
+            Duplicate All
+          </button>
+          <button
+            onClick={() => deleteSelectedBoxes()}
+            className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+          >
+            Delete All
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Single selection - existing behavior
   if (!selectedBox) {
     return null;
   }
@@ -190,7 +221,7 @@ export function PropertiesPanel() {
         {/* Actions */}
         <div className="space-y-2">
           <button
-            onClick={() => duplicateBox(selectedBox.id)}
+            onClick={() => duplicateSelectedBoxes()}
             className="w-full px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
           >
             Duplicate Box

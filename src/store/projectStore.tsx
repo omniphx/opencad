@@ -21,12 +21,12 @@ import { normalizeUnitSystem } from '../core/units';
 
 interface ProjectState {
   project: Project;
-  selectedBoxId: string | null;
+  selectedBoxIds: string[];
   isLoading: boolean;
   mode: 'project' | 'component-builder';
   currentTemplate: ComponentTemplate | null;
   componentLibrary: ComponentTemplate[];
-  clipboard: Box | null;
+  clipboard: Box[] | null;
   snapEnabled: boolean;
 }
 
@@ -36,7 +36,8 @@ type ProjectAction =
   | { type: 'ADD_BOX'; box: Box }
   | { type: 'UPDATE_BOX'; id: string; updates: Partial<Box> }
   | { type: 'DELETE_BOX'; id: string }
-  | { type: 'SELECT_BOX'; id: string | null }
+  | { type: 'SELECT_BOXES'; ids: string[] }
+  | { type: 'TOGGLE_BOX_SELECTION'; id: string }
   | { type: 'SET_UNIT_SYSTEM'; unitSystem: UnitSystem }
   | { type: 'SET_PROJECT_NAME'; name: string }
   | { type: 'START_COMPONENT_BUILDER' }
@@ -45,9 +46,10 @@ type ProjectAction =
   | { type: 'PLACE_COMPONENT'; template: ComponentTemplate }
   | { type: 'LOAD_COMPONENTS'; components: ComponentTemplate[] }
   | { type: 'DELETE_COMPONENT'; id: string }
-  | { type: 'COPY_BOX'; box: Box }
-  | { type: 'PASTE_BOX'; box: Box }
-  | { type: 'DUPLICATE_BOX'; box: Box }
+  | { type: 'COPY_BOXES'; boxes: Box[] }
+  | { type: 'PASTE_BOXES'; boxes: Box[] }
+  | { type: 'DUPLICATE_BOXES'; boxes: Box[] }
+  | { type: 'DELETE_SELECTED_BOXES'; ids: string[] }
   | { type: 'TOGGLE_SNAP' };
 
 function createDefaultProject(): Project {
@@ -103,12 +105,32 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
       const newState = setActiveBoxes(state, boxes);
       return {
         ...newState,
-        selectedBoxId: state.selectedBoxId === action.id ? null : state.selectedBoxId,
+        selectedBoxIds: state.selectedBoxIds.filter((id) => id !== action.id),
       };
     }
 
-    case 'SELECT_BOX':
-      return { ...state, selectedBoxId: action.id };
+    case 'DELETE_SELECTED_BOXES': {
+      const idsToDelete = new Set(action.ids);
+      const boxes = getActiveBoxes(state).filter((box) => !idsToDelete.has(box.id));
+      const newState = setActiveBoxes(state, boxes);
+      return {
+        ...newState,
+        selectedBoxIds: [],
+      };
+    }
+
+    case 'SELECT_BOXES':
+      return { ...state, selectedBoxIds: action.ids };
+
+    case 'TOGGLE_BOX_SELECTION': {
+      const isSelected = state.selectedBoxIds.includes(action.id);
+      return {
+        ...state,
+        selectedBoxIds: isSelected
+          ? state.selectedBoxIds.filter((id) => id !== action.id)
+          : [...state.selectedBoxIds, action.id],
+      };
+    }
 
     case 'SET_UNIT_SYSTEM':
       return {
@@ -126,7 +148,7 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
       return {
         ...state,
         mode: 'component-builder',
-        selectedBoxId: null,
+        selectedBoxIds: [],
         currentTemplate: {
           id: uuid(),
           name: '',
@@ -146,7 +168,7 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
         ...state,
         mode: 'project',
         currentTemplate: null,
-        selectedBoxId: null,
+        selectedBoxIds: [],
         componentLibrary: [saved, ...state.componentLibrary],
       };
     }
@@ -156,7 +178,7 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
         ...state,
         mode: 'project',
         currentTemplate: null,
-        selectedBoxId: null,
+        selectedBoxIds: [],
       };
 
     case 'PLACE_COMPONENT': {
@@ -182,14 +204,14 @@ function projectReducer(state: ProjectState, action: ProjectAction): ProjectStat
     case 'TOGGLE_SNAP':
       return { ...state, snapEnabled: !state.snapEnabled };
 
-    case 'COPY_BOX':
-      return { ...state, clipboard: action.box };
+    case 'COPY_BOXES':
+      return { ...state, clipboard: action.boxes };
 
-    case 'PASTE_BOX':
-    case 'DUPLICATE_BOX': {
-      const boxes = [...getActiveBoxes(state), action.box];
+    case 'PASTE_BOXES':
+    case 'DUPLICATE_BOXES': {
+      const boxes = [...getActiveBoxes(state), ...action.boxes];
       const newState = setActiveBoxes(state, boxes);
-      return { ...newState, selectedBoxId: action.box.id };
+      return { ...newState, selectedBoxIds: action.boxes.map((b) => b.id) };
     }
 
     default:
@@ -202,13 +224,16 @@ interface ProjectContextValue {
   addBox: (materialId?: string) => void;
   updateBox: (id: string, updates: Partial<Box>) => void;
   deleteBox: (id: string) => void;
-  selectBox: (id: string | null) => void;
+  deleteSelectedBoxes: () => void;
+  selectBoxes: (ids: string[]) => void;
+  toggleBoxSelection: (id: string) => void;
   setUnitSystem: (unitSystem: UnitSystem) => void;
   setProjectName: (name: string) => void;
   getSelectedBox: () => Box | undefined;
-  duplicateBox: (id: string) => void;
-  copyBox: (id: string) => void;
-  pasteBox: () => void;
+  getSelectedBoxes: () => Box[];
+  duplicateSelectedBoxes: () => void;
+  copySelectedBoxes: () => void;
+  pasteBoxes: () => void;
   startComponentBuilder: () => void;
   saveComponent: (name: string) => void;
   cancelComponentBuilder: () => void;
@@ -222,7 +247,7 @@ const ProjectContext = createContext<ProjectContextValue | null>(null);
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(projectReducer, {
     project: createDefaultProject(),
-    selectedBoxId: null,
+    selectedBoxIds: [],
     isLoading: true,
     mode: 'project',
     currentTemplate: null,
@@ -310,7 +335,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       materialId,
     };
     dispatch({ type: 'ADD_BOX', box });
-    dispatch({ type: 'SELECT_BOX', id: box.id });
+    dispatch({ type: 'SELECT_BOXES', ids: [box.id] });
   }, [state]);
 
   const updateBox = useCallback((id: string, updates: Partial<Box>) => {
@@ -321,8 +346,12 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'DELETE_BOX', id });
   }, []);
 
-  const selectBox = useCallback((id: string | null) => {
-    dispatch({ type: 'SELECT_BOX', id });
+  const selectBoxes = useCallback((ids: string[]) => {
+    dispatch({ type: 'SELECT_BOXES', ids });
+  }, []);
+
+  const toggleBoxSelection = useCallback((id: string) => {
+    dispatch({ type: 'TOGGLE_BOX_SELECTION', id });
   }, []);
 
   const setUnitSystem = useCallback((unitSystem: UnitSystem) => {
@@ -335,7 +364,13 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
   const getSelectedBox = useCallback(() => {
     const boxes = getActiveBoxes(state);
-    return boxes.find((box) => box.id === state.selectedBoxId);
+    return boxes.find((box) => box.id === state.selectedBoxIds[0]);
+  }, [state]);
+
+  const getSelectedBoxes = useCallback(() => {
+    const boxes = getActiveBoxes(state);
+    const idSet = new Set(state.selectedBoxIds);
+    return boxes.filter((box) => idSet.has(box.id));
   }, [state]);
 
   const findNonOverlappingPosition = useCallback((sourceBox: Box, boxes: Box[]) => {
@@ -365,38 +400,43 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     return { x: posX, y: sourceBox.position.y, z: posZ };
   }, []);
 
-  const duplicateBox = useCallback((id: string) => {
+  const duplicateSelectedBoxes = useCallback(() => {
     const boxes = getActiveBoxes(state);
-    const source = boxes.find((b) => b.id === id);
-    if (!source) return;
+    const selected = boxes.filter((b) => state.selectedBoxIds.includes(b.id));
+    if (selected.length === 0) return;
 
-    const newBox: Box = {
+    const newBoxes = selected.map((source) => ({
       ...source,
       id: uuid(),
       position: findNonOverlappingPosition(source, boxes),
       label: source.label ? `${source.label} (copy)` : undefined,
-    };
-    dispatch({ type: 'DUPLICATE_BOX', box: newBox });
+    }));
+    dispatch({ type: 'DUPLICATE_BOXES', boxes: newBoxes });
   }, [state, findNonOverlappingPosition]);
 
-  const copyBox = useCallback((id: string) => {
+  const copySelectedBoxes = useCallback(() => {
     const boxes = getActiveBoxes(state);
-    const source = boxes.find((b) => b.id === id);
-    if (!source) return;
-    dispatch({ type: 'COPY_BOX', box: source });
+    const selected = boxes.filter((b) => state.selectedBoxIds.includes(b.id));
+    if (selected.length === 0) return;
+    dispatch({ type: 'COPY_BOXES', boxes: selected });
   }, [state]);
 
-  const pasteBox = useCallback(() => {
-    if (!state.clipboard) return;
+  const pasteBoxes = useCallback(() => {
+    if (!state.clipboard || state.clipboard.length === 0) return;
     const boxes = getActiveBoxes(state);
-    const newBox: Box = {
-      ...state.clipboard,
+    const newBoxes = state.clipboard.map((source) => ({
+      ...source,
       id: uuid(),
-      position: findNonOverlappingPosition(state.clipboard, boxes),
-      label: state.clipboard.label ? `${state.clipboard.label} (copy)` : undefined,
-    };
-    dispatch({ type: 'PASTE_BOX', box: newBox });
+      position: findNonOverlappingPosition(source, boxes),
+      label: source.label ? `${source.label} (copy)` : undefined,
+    }));
+    dispatch({ type: 'PASTE_BOXES', boxes: newBoxes });
   }, [state, findNonOverlappingPosition]);
+
+  const deleteSelectedBoxes = useCallback(() => {
+    if (state.selectedBoxIds.length === 0) return;
+    dispatch({ type: 'DELETE_SELECTED_BOXES', ids: state.selectedBoxIds });
+  }, [state.selectedBoxIds]);
 
   const startComponentBuilder = useCallback(() => {
     dispatch({ type: 'START_COMPONENT_BUILDER' });
@@ -437,13 +477,16 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         addBox,
         updateBox,
         deleteBox,
-        selectBox,
+        deleteSelectedBoxes,
+        selectBoxes,
+        toggleBoxSelection,
         setUnitSystem,
         setProjectName,
         getSelectedBox,
-        duplicateBox,
-        copyBox,
-        pasteBox,
+        getSelectedBoxes,
+        duplicateSelectedBoxes,
+        copySelectedBoxes,
+        pasteBoxes,
         startComponentBuilder,
         saveComponent: saveComponentAction,
         cancelComponentBuilder,

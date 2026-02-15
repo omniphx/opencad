@@ -6,7 +6,7 @@ import { metersToDisplayUnit, getDisplayUnitLabel } from '../../core/units';
 
 export function BOMPanel() {
   const { project } = useProject();
-  const { state, selectBox } = useProjectStore();
+  const { state, selectBoxes } = useProjectStore();
 
   const unitLabel = getDisplayUnitLabel(project.unitSystem);
 
@@ -59,9 +59,9 @@ export function BOMPanel() {
                 {group.boxes.map((box) => (
                   <button
                     key={box.id}
-                    onClick={() => selectBox(box.id)}
+                    onClick={() => selectBoxes([box.id])}
                     className={`w-full text-left rounded-lg p-2 border transition-colors ${
-                      state.selectedBoxId === box.id
+                      state.selectedBoxIds.includes(box.id)
                         ? 'bg-blue-50 border-blue-200'
                         : 'bg-slate-50 border-slate-100 hover:bg-slate-100'
                     }`}
