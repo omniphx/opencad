@@ -265,8 +265,20 @@ export function Viewport() {
             allBoxes={activeBoxes}
             isSelected={state.selectedBoxIds.includes(box.id)}
             selectedBoxIds={state.selectedBoxIds}
-            onSelect={(id: string) => selectBoxes([id])}
             onToggleSelect={(id: string) => toggleBoxSelection(id)}
+            onSelectGroup={(ids: string[]) => selectBoxes(ids)}
+            onToggleSelectGroup={(ids: string[]) => {
+              const currentIds = new Set(state.selectedBoxIds);
+              const allIn = ids.every((id) => currentIds.has(id));
+              if (allIn) {
+                // Remove all group members
+                selectBoxes(state.selectedBoxIds.filter((id) => !ids.includes(id)));
+              } else {
+                // Add all group members
+                const merged = new Set([...state.selectedBoxIds, ...ids]);
+                selectBoxes(Array.from(merged));
+              }
+            }}
             onMove={handleMove}
             onMoveSelected={handleMoveSelected}
             snap={snap}

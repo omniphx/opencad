@@ -18,14 +18,15 @@ interface Box3DProps {
   allBoxes: Box[];
   isSelected: boolean;
   selectedBoxIds: string[];
-  onSelect: (id: string) => void;
   onToggleSelect: (id: string) => void;
+  onSelectGroup: (ids: string[]) => void;
+  onToggleSelectGroup: (ids: string[]) => void;
   onMove: (id: string, position: { x: number; y: number; z: number }) => void;
   onMoveSelected: (updates: Array<{ id: string; position: { x: number; y: number; z: number } }>) => void;
   snap: (v: number) => number;
 }
 
-export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, onSelect, onToggleSelect, onMove, onMoveSelected, snap }: Box3DProps) {
+export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, onToggleSelect, onSelectGroup, onToggleSelectGroup, onMove, onMoveSelected, snap }: Box3DProps) {
   const meshRef = useRef<Mesh>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(new Vector3());
@@ -46,12 +47,23 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, onSelect, onT
     );
   }, [box.dimensions.width, box.dimensions.height, box.dimensions.depth]);
 
+  // Get all box IDs in the same group as this box
+  const groupMemberIds = box.groupId
+    ? allBoxes.filter((b) => b.groupId === box.groupId).map((b) => b.id)
+    : [box.id];
+
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     if (e.shiftKey) {
-      onToggleSelect(box.id);
+      // Toggle entire group in/out of selection
+      if (box.groupId) {
+        onToggleSelectGroup(groupMemberIds);
+      } else {
+        onToggleSelect(box.id);
+      }
     } else if (!isSelected) {
-      onSelect(box.id);
+      // Select entire group
+      onSelectGroup(groupMemberIds);
     }
 
     // Lock drag plane to current Y so stacking doesn't shift the plane
@@ -171,9 +183,9 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, onSelect, onT
 
   const handlePointerUp = () => {
     // If we clicked on an already-selected box in a multi-selection without dragging,
-    // replace the selection with just this box (standard click behavior)
+    // replace the selection with just this group (or single box)
     if (!didDrag.current && wasMultiSelected.current && !pointerDownShift.current) {
-      onSelect(box.id);
+      onSelectGroup(groupMemberIds);
     }
     setIsDragging(false);
   };

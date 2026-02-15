@@ -111,7 +111,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-001. Add groupId to Box interface, add reducer actions, add toolbar buttons. The visual indicator can be a colored dashed outline on Box3D using Edges or Line from @react-three/drei."
     },
     {
@@ -128,7 +128,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-004, US-005, US-006. Update Box3D click handler: if clicked box has groupId, expand selection to all boxes with same groupId. Move/delete/duplicate already work on selectedBoxIds from US-004/US-005, so group expansion at selection time handles this automatically."
     },
     {

@@ -432,9 +432,18 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
       offsetX += groupWidth + spacing;
     }
 
+    // Map old groupIds to new groupIds so duplicated groups stay grouped
+    const groupIdMap = new Map<string, string>();
+    for (const source of sourceBoxes) {
+      if (source.groupId && !groupIdMap.has(source.groupId)) {
+        groupIdMap.set(source.groupId, uuid());
+      }
+    }
+
     return sourceBoxes.map((source) => ({
       ...source,
       id: uuid(),
+      groupId: source.groupId ? groupIdMap.get(source.groupId) : undefined,
       position: {
         x: source.position.x + offsetX,
         y: source.position.y,
