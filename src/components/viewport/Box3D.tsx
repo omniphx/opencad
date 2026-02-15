@@ -9,11 +9,12 @@ interface Box3DProps {
   allBoxes: Box[];
   isSelected: boolean;
   onSelect: (id: string) => void;
+  onToggleSelect: (id: string) => void;
   onMove: (id: string, position: { x: number; y: number; z: number }) => void;
   snap: (v: number) => number;
 }
 
-export function Box3D({ box, allBoxes, isSelected, onSelect, onMove, snap }: Box3DProps) {
+export function Box3D({ box, allBoxes, isSelected, onSelect, onToggleSelect, onMove, snap }: Box3DProps) {
   const meshRef = useRef<Mesh>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(new Vector3());
@@ -32,7 +33,11 @@ export function Box3D({ box, allBoxes, isSelected, onSelect, onMove, snap }: Box
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
-    onSelect(box.id);
+    if (e.shiftKey) {
+      onToggleSelect(box.id);
+    } else {
+      onSelect(box.id);
+    }
 
     // Lock drag plane to current Y so stacking doesn't shift the plane
     dragPlaneY.current = box.position.y;
