@@ -77,3 +77,19 @@
 1. `npm run build` passes (TypeScript check + production build)
 2. Browser verification: App loads correctly (screenshot: `us007-app-loaded.png`)
 3. Note: R3F pointer events don't work in headless Chrome, so drag undo testing not possible via Playwright
+
+## US-008: Fix properties panel undo requiring double press
+
+**Date:** 2026-02-14
+
+**Change:** Verified that properties panel undo already works correctly with a single Cmd+Z press. The DimensionInput component fires `onChange` only on blur (not on each keystroke), so each property change creates exactly one history entry.
+
+**Verification:**
+1. `npm run build` passes (TypeScript check + production build)
+2. Browser verification via Playwright:
+   - Added a 2×4 Lumber box
+   - Changed Width from 0.13 to 2.00, pressed Tab to blur
+   - Pressed Cmd+Z → Width reverted to 0.13 in one press
+   - Pressed Cmd+Shift+Z → Width restored to 2.00 (redo works)
+   - Changed X position from 0.00 to 3.00, pressed Tab to blur
+   - Pressed Cmd+Z → X position reverted to 0.00 in one press

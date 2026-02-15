@@ -98,3 +98,14 @@
   - Batch end must only fire when `isDragging` is true — pointer up fires even when no drag started (e.g., locked box click returns early before setIsDragging)
   - For click-without-drag on non-locked boxes: batch start fires, no UPDATE_BOX calls, batch end sees no changes → no-op
 ---
+
+## 2026-02-14 - US-008
+- Verified: Properties panel undo already works correctly with a single Cmd+Z press
+- DimensionInput fires `onChange` only on blur (not on each keystroke), creating exactly one UPDATE_BOX dispatch per property change
+- Each UPDATE_BOX (outside of batch) creates exactly one history entry in `projectReducerWithHistory`
+- Tested both dimension changes (width) and position changes (X) — both undo in one press
+- Files changed: none (already correct); only `prd.json` updated
+- **Learnings for future iterations:**
+  - DimensionInput uses controlled input with local state (`inputValue`) and only calls parent `onChange` on blur — this naturally prevents multiple history entries per value change
+  - Undo clears selection (`selectedBoxIds: []`), so after undo the properties panel hides. This is expected behavior.
+---
