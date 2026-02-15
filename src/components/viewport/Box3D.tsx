@@ -4,6 +4,17 @@ import { Html } from '@react-three/drei';
 import { Mesh, Vector3, BoxGeometry } from 'three';
 import { Box } from '../../types';
 import { getMaterialColor } from '../../core/materials';
+import type { CameraView } from './Viewport';
+
+// Per-view drag config: which plane to drag on and which axis stays fixed
+const DRAG_PLANE_CONFIG: Record<CameraView, { normal: [number, number, number]; fixedAxis: 'x' | 'y' | 'z' }> = {
+  iso:   { normal: [0, 1, 0], fixedAxis: 'y' },
+  top:   { normal: [0, 1, 0], fixedAxis: 'y' },
+  front: { normal: [0, 0, 1], fixedAxis: 'z' },
+  back:  { normal: [0, 0, 1], fixedAxis: 'z' },
+  left:  { normal: [1, 0, 0], fixedAxis: 'x' },
+  right: { normal: [1, 0, 0], fixedAxis: 'x' },
+};
 
 function groupIdToColor(groupId: string): string {
   let hash = 0;
@@ -19,6 +30,7 @@ interface Box3DProps {
   allBoxes: Box[];
   isSelected: boolean;
   selectedBoxIds: string[];
+  cameraView: CameraView;
   onToggleSelect: (id: string) => void;
   onSelectGroup: (ids: string[]) => void;
   onToggleSelectGroup: (ids: string[]) => void;
@@ -31,7 +43,7 @@ interface Box3DProps {
   onHistoryBatchEnd: () => void;
 }
 
-export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, onToggleSelect, onSelectGroup, onToggleSelectGroup, onMove, onMoveSelected, snap, onShowToast, pointerCapturedByBox, onHistoryBatchStart, onHistoryBatchEnd }: Box3DProps) {
+export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, onToggleSelect, onSelectGroup, onToggleSelectGroup, onMove, onMoveSelected, snap, onShowToast, pointerCapturedByBox, onHistoryBatchStart, onHistoryBatchEnd }: Box3DProps) {
   const meshRef = useRef<Mesh>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(new Vector3());
@@ -81,24 +93,27 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, onToggleSelec
       return;
     }
 
-    // Lock drag plane to current Y so stacking doesn't shift the plane
-    dragPlaneY.current = box.position.y;
+    // Lock drag plane based on current camera view
+    const config = DRAG_PLANE_CONFIG[cameraView];
+    dragPlaneY.current = box.position[config.fixedAxis];
 
-    const groundPlane = new Vector3(0, 1, 0);
+    const planeNormal = new Vector3(...config.normal);
     raycaster.setFromCamera(pointer, camera);
     const intersectPoint = new Vector3();
     raycaster.ray.intersectPlane(
-      { normal: groundPlane, constant: -dragPlaneY.current } as never,
+      { normal: planeNormal, constant: -dragPlaneY.current } as never,
       intersectPoint
     );
 
-    setDragOffset(
-      new Vector3(
-        box.position.x - intersectPoint.x,
-        0,
-        box.position.z - intersectPoint.z
-      )
+    // Compute offset on the two movable axes, zero on the fixed axis
+    const offset = new Vector3(
+      box.position.x - intersectPoint.x,
+      box.position.y - intersectPoint.y,
+      box.position.z - intersectPoint.z,
     );
+    // Zero out the fixed axis so it doesn't accumulate drift
+    offset[config.fixedAxis] = 0;
+    setDragOffset(offset);
 
     // Track drag state for click-vs-drag detection
     didDrag.current = false;
@@ -134,40 +149,56 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, onToggleSelec
     if (!isDragging) return;
     e.stopPropagation();
 
-    const groundPlane = new Vector3(0, 1, 0);
+    const config = DRAG_PLANE_CONFIG[cameraView];
+    const planeNormal = new Vector3(...config.normal);
     raycaster.setFromCamera(pointer, camera);
     const intersectPoint = new Vector3();
     raycaster.ray.intersectPlane(
-      { normal: groundPlane, constant: -dragPlaneY.current } as never,
+      { normal: planeNormal, constant: -dragPlaneY.current } as never,
       intersectPoint
     );
 
-    const newX = snap(intersectPoint.x + dragOffset.x);
-    const newZ = snap(intersectPoint.z + dragOffset.z);
+    // Build new position: snap movable axes, keep fixed axis from original
+    const raw = {
+      x: intersectPoint.x + dragOffset.x,
+      y: intersectPoint.y + dragOffset.y,
+      z: intersectPoint.z + dragOffset.z,
+    };
+    const newPos = {
+      x: config.fixedAxis === 'x' ? box.position.x : snap(raw.x),
+      y: config.fixedAxis === 'y' ? box.position.y : snap(raw.y),
+      z: config.fixedAxis === 'z' ? box.position.z : snap(raw.z),
+    };
 
     didDrag.current = true;
     const draggedStartPos = dragStartPositions.current.get(box.id);
     const isMultiDrag = dragStartPositions.current.size > 1 && draggedStartPos;
 
     if (isMultiDrag) {
-      // Compute delta from dragged box's start position
-      const deltaX = newX - draggedStartPos.x;
-      const deltaZ = newZ - draggedStartPos.z;
+      const delta = {
+        x: newPos.x - draggedStartPos.x,
+        y: newPos.y - draggedStartPos.y,
+        z: newPos.z - draggedStartPos.z,
+      };
+      // Zero delta on fixed axis
+      delta[config.fixedAxis] = 0;
 
       const updates: Array<{ id: string; position: { x: number; y: number; z: number } }> = [];
 
       for (const [id, startPos] of dragStartPositions.current) {
-        const movedX = startPos.x + deltaX;
-        const movedZ = startPos.z + deltaZ;
-
-        // Keep Y at pre-drag position
-        updates.push({ id, position: { x: movedX, y: startPos.y, z: movedZ } });
+        updates.push({
+          id,
+          position: {
+            x: startPos.x + delta.x,
+            y: startPos.y + delta.y,
+            z: startPos.z + delta.z,
+          },
+        });
       }
 
       onMoveSelected(updates);
     } else {
-      // Single box drag — keep Y at pre-drag position
-      onMove(box.id, { x: newX, y: box.position.y, z: newZ });
+      onMove(box.id, newPos);
     }
   };
 

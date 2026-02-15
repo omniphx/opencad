@@ -14,6 +14,75 @@ const MIN_ZOOM = 20;
 const MAX_ZOOM = 1500;
 const DRAG_THRESHOLD = 5; // pixels
 
+export type CameraView = 'iso' | 'front' | 'back' | 'left' | 'right' | 'top';
+
+const CAMERA_DISTANCE = 20;
+const ISO_ANGLE = Math.PI * 5 / 4; // 225 degrees
+const ISO_ELEVATION = Math.atan(1 / Math.sqrt(2)); // ~35.264 degrees
+
+const VIEW_PRESETS: Record<CameraView, { position: [number, number, number]; up: [number, number, number] }> = {
+  iso: {
+    position: [
+      CAMERA_DISTANCE * Math.cos(ISO_ELEVATION) * Math.sin(ISO_ANGLE),
+      CAMERA_DISTANCE * Math.sin(ISO_ELEVATION),
+      CAMERA_DISTANCE * Math.cos(ISO_ELEVATION) * Math.cos(ISO_ANGLE),
+    ],
+    up: [0, 1, 0],
+  },
+  front: { position: [0, 0, CAMERA_DISTANCE], up: [0, 1, 0] },
+  back: { position: [0, 0, -CAMERA_DISTANCE], up: [0, 1, 0] },
+  left: { position: [-CAMERA_DISTANCE, 0, 0], up: [0, 1, 0] },
+  right: { position: [CAMERA_DISTANCE, 0, 0], up: [0, 1, 0] },
+  top: { position: [0, CAMERA_DISTANCE, 0], up: [0, 0, -1] },
+};
+
+// Labels use user-facing axis names
+const VIEW_LABELS: Record<CameraView, string> = {
+  iso: 'Iso',
+  front: 'Front',
+  back: 'Back',
+  left: 'Left',
+  right: 'Right',
+  top: 'Top',
+};
+
+function CameraViewController({
+  view,
+  controlsRef,
+}: {
+  view: CameraView;
+  controlsRef: React.RefObject<OrbitControlsImpl | null>;
+}) {
+  const { camera } = useThree();
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
+    // Skip the first render — IsometricCamera sets up the initial position
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      return;
+    }
+
+    const preset = VIEW_PRESETS[view];
+    const target = controlsRef.current?.target ?? new Vector3(0, 0, 0);
+
+    camera.position.set(
+      target.x + preset.position[0],
+      target.y + preset.position[1],
+      target.z + preset.position[2],
+    );
+    camera.up.set(...preset.up);
+    camera.lookAt(target);
+    camera.updateProjectionMatrix();
+
+    if (controlsRef.current) {
+      controlsRef.current.update();
+    }
+  }, [view, camera, controlsRef]);
+
+  return null;
+}
+
 function CameraExposer({ cameraRef }: { cameraRef: React.MutableRefObject<OrthographicCamera | null> }) {
   const { camera } = useThree();
   useEffect(() => {
@@ -120,6 +189,7 @@ export function Viewport() {
   const cameraRef = useRef<OrthographicCamera | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [marquee, setMarquee] = useState<MarqueeRect | null>(null);
+  const [cameraView, setCameraView] = useState<CameraView>('iso');
   const marqueeActive = useRef(false);
   const shiftHeld = useRef(false);
   const pointerCapturedByBox = useRef(false);
@@ -254,9 +324,28 @@ export function Viewport() {
           style={marqueeStyle}
         />
       )}
+      <div
+        className="absolute bottom-4 left-4 z-10 flex gap-1"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {(Object.keys(VIEW_LABELS) as CameraView[]).map((key) => (
+          <button
+            key={key}
+            onClick={() => setCameraView(key)}
+            className={`px-2 py-1 text-xs font-medium rounded transition-colors ${
+              cameraView === key
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+            }`}
+          >
+            {VIEW_LABELS[key]}
+          </button>
+        ))}
+      </div>
       <Canvas>
         <CameraExposer cameraRef={cameraRef} />
         <IsometricCamera />
+        <CameraViewController view={cameraView} controlsRef={controlsRef} />
         <OrbitControls
           ref={controlsRef}
           enableRotate={false}
@@ -288,6 +377,7 @@ export function Viewport() {
             allBoxes={activeBoxes}
             isSelected={state.selectedBoxIds.includes(box.id)}
             selectedBoxIds={state.selectedBoxIds}
+            cameraView={cameraView}
             onToggleSelect={(id: string) => toggleBoxSelection(id)}
             onSelectGroup={(ids: string[]) => selectBoxes(ids)}
             onToggleSelectGroup={(ids: string[]) => {
