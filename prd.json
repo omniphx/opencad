@@ -1,209 +1,84 @@
 {
   "project": "OpenCAD",
-  "branchName": "ralph/multi-select-groups-lock-undo",
-  "description": "Multi-Select, Grouping, Lock, and Undo/Redo - Add marquee and shift-click multi-selection, permanent grouping, item locking, and full undo/redo history to the CAD editor",
+  "branchName": "ralph/fix-marquee-and-grid-alignment",
+  "description": "Fix marquee selection conflicts with box dragging, improve selection visual feedback, and align grid spacing with the active unit system",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Refactor selection state from single to multi-select",
-      "description": "As a developer, I need to change the selection model from a single selectedBoxId to an array of selectedBoxIds so that all downstream features can support multi-selection.",
+      "title": "Prevent marquee from activating on box click/drag",
+      "description": "As a user, I want to drag a box without the marquee selection rectangle appearing so that box movement works reliably.",
       "acceptanceCriteria": [
-        "Replace `selectedBoxId: string | null` with `selectedBoxIds: string[]` in ProjectState",
-        "Update `selectBox` action to `selectBoxes` that accepts an array of IDs, and add `toggleBoxSelection` for adding/removing individual IDs",
-        "Update useSelection hook to expose selectedBoxIds array, selectedBoxes array, selectBoxes, toggleBoxSelection, and deselectAll",
-        "Update Viewport.tsx to pass updated selection props to Box3D components",
-        "Update Box3D.tsx to check `selectedBoxIds.includes(box.id)` for highlight styling",
-        "Update PropertiesPanel.tsx to work with first selected box when one is selected, or show multi-select summary (count of selected items) when 2+ selected",
-        "Update BOMPanel.tsx to highlight all selected boxes",
-        "Update App.tsx keyboard shortcuts (Cmd+C, Cmd+V, Cmd+D, Delete) to work with selectedBoxIds array (operate on first selected box for copy, all for delete/duplicate)",
-        "Single-click on a box still selects only that box (replaces selection) — existing behavior preserved",
-        "Click on empty space deselects all — existing behavior preserved",
-        "Typecheck passes"
+        "Add a shared mutable ref (e.g., `pointerCapturedByBox: React.MutableRefObject<boolean>`) to the Viewport component",
+        "Pass this ref to all Box3D components as a prop",
+        "In Box3D's `onPointerDown` handler, set `pointerCapturedByBox.current = true` synchronously before any other logic",
+        "In Box3D's `onPointerUp` handler, reset `pointerCapturedByBox.current = false`",
+        "In Viewport's `handleMarqueeMouseDown`, check `pointerCapturedByBox.current` at the start — if true, return early without initializing marquee state",
+        "Clicking and dragging on a box moves the box without any marquee rectangle appearing",
+        "Marquee rectangle only appears when clicking and dragging on empty grid space",
+        "Shift+Click on a box still toggles selection without triggering marquee",
+        "Single-click on empty space (no drag) still deselects all",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "This is the foundational refactor. Every other story depends on this. Touch files: types/index.ts, store/projectStore.tsx, hooks/useSelection.ts, components/viewport/Viewport.tsx, components/viewport/Box3D.tsx, components/layout/PropertiesPanel.tsx, components/layout/BOMPanel.tsx, App.tsx"
+      "notes": "The root cause is that Box3D uses R3F pointer events while the marquee listens on the HTML container via React mouse events — stopPropagation in one system doesn't block the other. Since pointer events fire before mouse events in the browser event loop, the shared ref flag will be set by the time the mouse handler runs. Key files: Viewport.tsx, Box3D.tsx."
     },
     {
       "id": "US-002",
-      "title": "Add Shift+Click multi-select behavior",
-      "description": "As a user, I want to Shift+Click individual boxes to add or remove them from my selection so that I can fine-tune which items are selected.",
+      "title": "Improve selected box visual feedback",
+      "description": "As a user, I want selected boxes to be clearly visually distinct so I can immediately tell which items are selected after using marquee or Shift+Click.",
       "acceptanceCriteria": [
-        "Shift+Click on an unselected box adds it to the current selection",
-        "Shift+Click on an already-selected box removes it from the selection",
-        "Regular click (no Shift) on a box replaces the entire selection with just that box (existing behavior)",
-        "Box3D handlePointerDown checks for shiftKey on the pointer event",
+        "Update Box3D's meshLambertMaterial to add `emissive` and `emissiveIntensity` props when selected",
+        "When selected: set emissive to a blue highlight color (e.g., '#3b82f6') with emissiveIntensity of 0.15-0.25",
+        "When not selected: set emissive to '#000000' (black, no glow) with emissiveIntensity of 0",
+        "The selection highlight is clearly visible and obviously different from the unselected state",
+        "Selection visual works for all material colors including blue-ish materials",
+        "Multi-selected boxes (via marquee or Shift+Click) all show the same selection highlight",
+        "Unselected boxes return to their normal appearance immediately when deselected",
+        "Keep the existing blue edge outline (#3b82f6) for selected boxes in addition to the emissive glow",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
       "passes": true,
-      "notes": "Depends on US-001 (selectedBoxIds array). Modify Box3D.tsx handlePointerDown to check event.shiftKey and call toggleBoxSelection instead of selectBoxes."
+      "notes": "meshLambertMaterial supports emissive prop which adds a glow independent of lighting. This is the simplest approach — no extra meshes or post-processing needed. Key file: Box3D.tsx."
     },
     {
       "id": "US-003",
-      "title": "Add marquee (box) selection overlay",
-      "description": "As a user, I want to click and drag on an empty area of the viewport to draw a selection rectangle so that I can select multiple boxes at once.",
+      "title": "Make grid cell size match unit system",
+      "description": "As a user, I want the grid lines to represent whole units in my chosen system so that I can visually estimate distances and place items precisely.",
       "acceptanceCriteria": [
-        "Click-and-drag on empty viewport area (not on a box) draws a visible selection rectangle as a 2D HTML overlay",
-        "Marquee rectangle has semi-transparent blue fill (20% opacity) with solid blue border",
-        "On mouse release, all boxes whose projected screen positions overlap the marquee rectangle are selected",
-        "Use Three.js Vector3.project() with the orthographic camera to map box center positions to screen coordinates for hit-testing",
-        "Marquee only activates when drag starts on empty space (not on an existing box)",
-        "Clicking empty space without dragging (small movement threshold) deselects all",
-        "Shift+marquee adds to existing selection instead of replacing it",
+        "Update the Grid component (src/components/viewport/Grid.tsx) to accept a `unitSystem` prop",
+        "In feet mode: set cellSize to 0.3048 (1 foot) and sectionSize to 3.048 (10 feet)",
+        "In inches mode: same as feet — cellSize 0.3048 (1 foot) and sectionSize 3.048 (10 feet)",
+        "In metric mode: set cellSize to 0.01 (1 cm) and sectionSize to 0.1 (10 cm)",
+        "Pass unitSystem from Viewport (which has access to project state) to the Grid component as a prop",
+        "Grid lines visually change when the user switches unit system in the toolbar",
+        "Grid origin remains at (0,0,0) so box positions align with grid intersections",
+        "A box placed at position (0,0,0) has its bottom-left-front corner exactly on a grid line intersection",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
       "passes": true,
-      "notes": "Depends on US-001. Implement as a 2D HTML div overlay positioned absolutely over the R3F Canvas. Track mousedown/mousemove/mouseup on the canvas container. Use camera.project() to convert 3D box positions to 2D screen coords for intersection testing."
+      "notes": "The drei Grid component accepts cellSize and sectionSize as props. Changing these dynamically when the unit system changes is straightforward. The infiniteGrid mode handles alignment — grid lines extend from position [0,0,0] in multiples of cellSize. Key files: Grid.tsx, Viewport.tsx."
     },
     {
       "id": "US-004",
-      "title": "Multi-select move (drag multiple boxes)",
-      "description": "As a user, I want to drag any selected box and have all other selected boxes move with it so that I can reposition groups of items together.",
+      "title": "Align snap increment with visible grid lines",
+      "description": "As a user, I want snapping to land on visible grid lines so that the snap behavior matches what I see.",
       "acceptanceCriteria": [
-        "Dragging one box in a multi-selection moves all selected boxes by the same XZ offset",
-        "Relative positions between selected boxes are preserved during the drag",
-        "Snap-to-grid applies to the dragged box; other selected boxes follow the same delta offset",
-        "Auto-stacking behavior still works for the dragged group",
-        "Viewport handleMove function updated to accept array of box position updates",
+        "Update getSnapIncrement() in src/core/units.ts to return 0.3048 (1 foot) for both 'feet' and 'inches' unit systems",
+        "Keep getSnapIncrement() returning 0.01 (1 cm) for 'metric' unit system",
+        "Existing snap behavior (dragging boxes with snap enabled) still works correctly with new increments",
+        "Boxes snap exactly to visible grid line positions when dragged",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
       "passes": true,
-      "notes": "Depends on US-001. In Box3D, on drag start record initial positions of ALL selected boxes. On each move event compute delta from dragged box start position and apply to all selected boxes via batch updateBox calls."
-    },
-    {
-      "id": "US-005",
-      "title": "Multi-select delete and duplicate",
-      "description": "As a user, I want to delete or duplicate all selected boxes at once so that I can quickly manage multiple items.",
-      "acceptanceCriteria": [
-        "Pressing Delete or Backspace removes all selected boxes",
-        "Selection clears after deletion",
-        "Cmd+D duplicates all selected boxes, offset to avoid overlap",
-        "New duplicates become the new selection",
-        "Relative positions between duplicated boxes are preserved",
-        "Cmd+C copies all selected boxes to clipboard (store array instead of single box)",
-        "Cmd+V pastes all copied boxes preserving relative positions",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 5,
-      "passes": true,
-      "notes": "Depends on US-001. Update App.tsx keyboard handlers and projectStore actions. Change clipboard from `Box | null` to `Box[] | null`. Delete and duplicate iterate over selectedBoxIds."
-    },
-    {
-      "id": "US-006",
-      "title": "Add groupId to Box type and create group action",
-      "description": "As a user, I want to group selected boxes into a permanent group so they always move, duplicate, and delete as a unit.",
-      "acceptanceCriteria": [
-        "Add optional `groupId?: string` field to the Box interface in types/index.ts",
-        "Add GROUP_BOXES action to projectStore that assigns a shared UUID groupId to all selected boxes",
-        "Add UNGROUP_BOXES action that removes groupId from all selected boxes",
-        "Add 'Group' button in the toolbar that appears (or is enabled) when 2+ boxes are selected",
-        "Add 'Ungroup' button that appears (or is enabled) when selected boxes share a groupId",
-        "Grouped boxes show a subtle shared visual indicator (e.g., dashed colored outline matching group)",
-        "Groups persist across sessions (groupId saved with box data to IndexedDB)",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 6,
-      "passes": true,
-      "notes": "Depends on US-001. Add groupId to Box interface, add reducer actions, add toolbar buttons. The visual indicator can be a colored dashed outline on Box3D using Edges or Line from @react-three/drei."
-    },
-    {
-      "id": "US-007",
-      "title": "Group selection and group-aware move/delete",
-      "description": "As a user, I want clicking any box in a group to select the entire group, and moving or deleting one group member to affect the whole group.",
-      "acceptanceCriteria": [
-        "Clicking any box that has a groupId automatically selects all boxes with that same groupId",
-        "Shift+Click on a grouped box toggles the entire group in/out of selection",
-        "Dragging any box in a group moves all group members together (same as multi-select move)",
-        "Deleting a selected group deletes all members",
-        "Duplicating a selected group duplicates all members with a new shared groupId",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 7,
-      "passes": true,
-      "notes": "Depends on US-004, US-005, US-006. Update Box3D click handler: if clicked box has groupId, expand selection to all boxes with same groupId. Move/delete/duplicate already work on selectedBoxIds from US-004/US-005, so group expansion at selection time handles this automatically."
-    },
-    {
-      "id": "US-008",
-      "title": "Add locked field to Box and lock/unlock UI",
-      "description": "As a user, I want to lock boxes in place so they cannot be accidentally moved or deleted.",
-      "acceptanceCriteria": [
-        "Add `locked: boolean` field (default false) to Box interface in types/index.ts",
-        "Add TOGGLE_LOCK action to projectStore that toggles locked state on selected boxes",
-        "Add Lock/Unlock toggle button in PropertiesPanel for selected box(es)",
-        "Add Lock icon button in toolbar when items are selected",
-        "Locked boxes display a small lock icon overlay in the 3D viewport (use Html from @react-three/drei for the overlay)",
-        "Locked state persists to IndexedDB",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 8,
-      "passes": true,
-      "notes": "Depends on US-001. Add locked boolean to Box, add reducer action, add UI buttons and 3D overlay icon."
-    },
-    {
-      "id": "US-009",
-      "title": "Enforce lock behavior on move and delete",
-      "description": "As a user, I want locked boxes to resist being moved or deleted, with a visual warning when I try.",
-      "acceptanceCriteria": [
-        "Attempting to drag a locked box does not move it and shows a brief visual warning (e.g., red flash on the box or a small toast notification)",
-        "If dragging a multi-selection that includes locked boxes, only unlocked boxes move; locked ones stay put",
-        "Attempting to delete locked boxes via Delete/Backspace skips them and shows a warning",
-        "If all selected boxes are locked, delete does nothing and shows warning",
-        "Warning is non-blocking (auto-dismisses after ~2 seconds)",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 9,
-      "passes": true,
-      "notes": "Depends on US-008, US-004. Update Box3D drag handler to check locked flag and abort drag. Update delete handler to filter out locked boxes. Add a simple toast/notification component for warnings."
-    },
-    {
-      "id": "US-010",
-      "title": "Implement undo/redo history system",
-      "description": "As a developer, I need an undo/redo history system in the state management layer so that all box mutations can be reversed.",
-      "acceptanceCriteria": [
-        "Add `history: Box[][]` array and `historyIndex: number` to ProjectState",
-        "After every action that mutates `project.boxes`, push a deep clone of the new boxes array to history",
-        "Add UNDO action: if historyIndex > 0, decrement historyIndex and restore boxes from that snapshot",
-        "Add REDO action: if historyIndex < history.length - 1, increment historyIndex and restore boxes from that snapshot",
-        "Performing a new mutation after an undo truncates the history array at current index (clears redo stack)",
-        "History tracks: ADD_BOX, DELETE_BOX, UPDATE_BOX, DUPLICATE_BOX, PASTE_BOX, GROUP_BOXES, UNGROUP_BOXES, TOGGLE_LOCK",
-        "History is unlimited within the session and resets on page reload (not persisted to IndexedDB)",
-        "Expose `canUndo` and `canRedo` booleans and `undo()` / `redo()` functions from ProjectContext",
-        "Auto-save always saves the current state (not the undo history)",
-        "Typecheck passes"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "Modifies store/projectStore.tsx. Add history and historyIndex to state. Create a helper that wraps box-mutating actions to push snapshots. Expose undo/redo actions and canUndo/canRedo computed values."
-    },
-    {
-      "id": "US-011",
-      "title": "Add undo/redo toolbar buttons and keyboard shortcuts",
-      "description": "As a user, I want undo/redo buttons in the toolbar and keyboard shortcuts so I can quickly reverse mistakes.",
-      "acceptanceCriteria": [
-        "Undo button with left-curved arrow icon added to toolbar (after Add Box button area)",
-        "Redo button with right-curved arrow icon added to toolbar next to undo",
-        "Undo button is visually disabled (dimmed) when canUndo is false",
-        "Redo button is visually disabled (dimmed) when canRedo is false",
-        "Cmd+Z triggers undo",
-        "Shift+Cmd+Z triggers redo",
-        "Keyboard shortcuts only fire when not focused on a text input (check document.activeElement tagName)",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
-      ],
-      "priority": 11,
-      "passes": true,
-      "notes": "Depends on US-010. Add buttons to Toolbar.tsx using undo/redo from useProjectStore. Add keyboard event listeners in App.tsx alongside existing shortcuts."
+      "notes": "This is a simple change to one function in src/core/units.ts. The snap increment previously returned 0.0254 (1 inch) for both feet and inches modes, which didn't match any visible grid line. Now it matches the grid cell size exactly."
     }
   ]
 }

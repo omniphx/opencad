@@ -13,7 +13,8 @@ You are an autonomous coding agent working on a software project.
 7. Update CLAUDE.md files if you discover reusable patterns (see below)
 8. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`
 9. Update the PRD to set `passes: true` for the completed story
-10. Append your progress to `progress.txt`
+10. Provide evidence of your testing and checks within `evidence.md`. Be sure to include any relevant screenshots or verification steps to prove the feature was completed.
+11. Once finished, merge your `branchName` into `main`
 
 ## Progress Report Format
 
@@ -80,15 +81,14 @@ Only update CLAUDE.md if you have **genuinely reusable knowledge** that would he
 - Keep changes focused and minimal
 - Follow existing code patterns
 
-## Browser Testing (If Available)
+## Browser Testing
 
-For any story that changes UI, verify it works in the browser if you have browser testing tools configured (e.g., via MCP):
+For any story that changes UI, verify it works in the browser with Playwright CLI.
 
 1. Navigate to the relevant page
 2. Verify the UI changes work as expected
 3. Take a screenshot if helpful for the progress log
-
-If no browser tools are available, note in your progress report that manual browser verification is needed.
+4. Append details about your testing in the `evidence.md`
 
 ## Stop Condition
 
