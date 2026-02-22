@@ -1,11 +1,11 @@
 {
-  "name": "opencad-mcp",
+  "name": "@omniphx/sawdust-mcp",
   "version": "0.1.0",
   "description": "MCP server for OpenCAD project file manipulation",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "opencad-mcp": "dist/index.js"
+    "sawdust-mcp": "dist/index.js"
   },
   "files": [
     "dist"

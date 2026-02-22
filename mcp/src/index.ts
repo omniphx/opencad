@@ -14,7 +14,7 @@ function parseArgs(): string {
   const idx = args.indexOf('--file');
 
   if (idx === -1 || !args[idx + 1]) {
-    console.error('Usage: opencad-mcp --file <path-to-.opencad.json>');
+    console.error('Usage: sawdust-mcp --file <path-to-.sawdust.json>');
     process.exit(1);
   }
 

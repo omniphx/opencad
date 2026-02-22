@@ -35,7 +35,7 @@ The MCP server lets AI assistants like Claude Desktop read and modify your OpenC
       "command": "npx",
       "args": [
         "-y",
-        "opencad-mcp",
+        "@omniphx/sawdust-mcp",
         "--file",
         "/absolute/path/to/MyProject.opencad.json"
       ]
