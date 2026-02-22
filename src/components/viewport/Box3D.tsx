@@ -1,6 +1,5 @@
 import { useRef, useState, useMemo } from 'react';
 import { ThreeEvent, useThree } from '@react-three/fiber';
-import { Html } from '@react-three/drei';
 import { Mesh, Vector3, BoxGeometry, Plane } from 'three';
 import { Box } from '../../types';
 import { getMaterialColor } from '../../core/materials';
@@ -46,7 +45,6 @@ interface Box3DProps {
 export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, onToggleSelect, onSelectGroup, onToggleSelectGroup, onMove, onMoveSelected, snap, onShowToast, pointerCapturedByBox, onHistoryBatchStart, onHistoryBatchEnd }: Box3DProps) {
   const meshRef = useRef<Mesh>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [dragOffset, setDragOffset] = useState(new Vector3());
   const dragPlaneY = useRef(0);
   const dragPlaneRef = useRef(new Plane());
@@ -239,8 +237,8 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, o
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={() => { handlePointerUp(); setIsHovered(false); document.body.style.cursor = 'default'; }}
-        onPointerEnter={() => { setIsHovered(true); if (!box.locked) document.body.style.cursor = 'move'; }}
+        onPointerLeave={() => { handlePointerUp(); document.body.style.cursor = 'default'; }}
+        onPointerEnter={() => { if (!box.locked) document.body.style.cursor = 'move'; }}
         onClick={(e: ThreeEvent<MouseEvent>) => e.stopPropagation()}
       >
         <boxGeometry
@@ -277,27 +275,6 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, o
         </lineSegments>
       )}
 
-      {/* Move icon overlay for unlocked objects (shown on hover) */}
-      {!box.locked && isHovered && (
-        <Html
-          position={[box.dimensions.width, box.dimensions.height, 0]}
-          style={{ pointerEvents: 'none' }}
-          center
-        >
-          <div style={{
-            fontSize: '12px',
-            lineHeight: 1,
-            background: 'rgba(100, 100, 100, 0.7)',
-            borderRadius: '4px',
-            padding: '2px 4px',
-            color: 'white',
-            userSelect: 'none',
-            whiteSpace: 'nowrap',
-          }}>
-            ✥
-          </div>
-        </Html>
-      )}
     </group>
   );
 }
