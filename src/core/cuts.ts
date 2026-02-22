@@ -6,6 +6,14 @@ interface CutterProps {
   scale: [number, number, number];
 }
 
+export interface CutPlaneVizProps {
+  groupPosition: [number, number, number];
+  groupRotation: [number, number, number];
+  meshPosition: [number, number, number];
+  meshRotation: [number, number, number];
+  planeArgs: [number, number];
+}
+
 /**
  * Face configuration: for each face, defines the normal axis, the pivot axis
  * the cut rotates around, and the direction the cutter is offset.
@@ -85,5 +93,87 @@ export function buildCutterProps(
     position: pos,
     rotation: rot,
     scale: [cutterSize, cutterSize, cutterSize],
+  };
+}
+
+/**
+ * Returns props for rendering a semi-transparent visualization plane
+ * that shows where and at what angle a cut occurs on a box.
+ *
+ * The plane is positioned at the hinge edge of the cut face and tilted
+ * by the cut angle, so it visually represents the exposed cut surface.
+ *
+ * All coordinates are relative to the box center.
+ */
+export function buildCutPlaneVizProps(
+  dimensions: { width: number; height: number; depth: number },
+  cut: BoxCut,
+): CutPlaneVizProps {
+  const { width: w, height: h, depth: d } = dimensions;
+  const angleRad = (cut.angle * Math.PI) / 180;
+
+  // Each face config defines:
+  //   hinge: the edge where the cut plane pivots (one edge of the face)
+  //   offset: position of plane center relative to hinge (in group-local coords)
+  //   meshRot: rotation to orient the PlaneGeometry (XY default) to lie on the face
+  //   groupRot: rotation applied to the group to tilt the plane by the cut angle
+  //   size: [width, height] of the plane geometry
+  let hinge: [number, number, number];
+  let offset: [number, number, number];
+  let meshRot: [number, number, number];
+  let groupRot: [number, number, number];
+  let size: [number, number];
+
+  switch (cut.face) {
+    case 'top':
+      hinge = [0, h / 2, -d / 2];
+      offset = [0, 0, d / 2];
+      meshRot = [-Math.PI / 2, 0, 0];
+      groupRot = [angleRad, 0, 0];
+      size = [w, d];
+      break;
+    case 'bottom':
+      hinge = [0, -h / 2, -d / 2];
+      offset = [0, 0, d / 2];
+      meshRot = [-Math.PI / 2, 0, 0];
+      groupRot = [-angleRad, 0, 0];
+      size = [w, d];
+      break;
+    case 'front':
+      hinge = [0, h / 2, d / 2];
+      offset = [0, -h / 2, 0];
+      meshRot = [0, 0, 0];
+      groupRot = [-angleRad, 0, 0];
+      size = [w, h];
+      break;
+    case 'back':
+      hinge = [0, h / 2, -d / 2];
+      offset = [0, -h / 2, 0];
+      meshRot = [0, 0, 0];
+      groupRot = [angleRad, 0, 0];
+      size = [w, h];
+      break;
+    case 'right':
+      hinge = [w / 2, h / 2, 0];
+      offset = [0, -h / 2, 0];
+      meshRot = [0, Math.PI / 2, 0];
+      groupRot = [0, 0, -angleRad];
+      size = [d, h];
+      break;
+    case 'left':
+      hinge = [-w / 2, h / 2, 0];
+      offset = [0, -h / 2, 0];
+      meshRot = [0, Math.PI / 2, 0];
+      groupRot = [0, 0, angleRad];
+      size = [d, h];
+      break;
+  }
+
+  return {
+    groupPosition: hinge,
+    groupRotation: groupRot,
+    meshPosition: offset,
+    meshRotation: meshRot,
+    planeArgs: size,
   };
 }
