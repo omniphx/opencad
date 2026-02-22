@@ -223,7 +223,7 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, i
   return (
     <group
       position={[box.position.x, box.position.y, box.position.z]}
-      rotation={[0, box.rotation, 0]}
+      rotation={[box.rotation.x, box.rotation.y, box.rotation.z]}
     >
       <mesh
         ref={meshRef}

@@ -19,6 +19,7 @@ import { pickAndParseImportFile } from "../core/export";
 import { DEFAULT_MATERIALS, getMaterialById } from "../core/materials";
 import { placeComponentBoxes } from "../core/placement";
 import { normalizeUnitSystem } from "../core/units";
+import { ZERO_ROTATION, rotatePositionAroundAxis, addRotationOnAxis, boxVisualCenter, cornerFromVisualCenter } from "../core/rotation";
 
 interface ProjectState {
   project: Project;
@@ -59,7 +60,7 @@ type ProjectAction =
   | { type: "TOGGLE_SNAP" }
   | { type: "GROUP_BOXES"; ids: string[]; groupId: string }
   | { type: "UNGROUP_BOXES"; ids: string[] }
-  | { type: "ROTATE_SELECTED"; ids: string[]; angle: number }
+  | { type: "ROTATE_SELECTED"; ids: string[]; angle: number; axis: 'x' | 'y' | 'z' }
   | { type: "TOGGLE_LOCK"; ids: string[] }
   | { type: "TOGGLE_VISIBILITY"; ids: string[] }
   | { type: "SHOW_TOAST"; message: string }
@@ -107,6 +108,7 @@ function projectReducer(
         ...b,
         position: { ...b.position },
         dimensions: { ...b.dimensions },
+        rotation: { ...b.rotation },
       }));
       return {
         ...state,
@@ -283,32 +285,37 @@ function projectReducer(
       const targetBoxes = allBoxes.filter((b) => idSet.has(b.id) && !b.locked);
       if (targetBoxes.length === 0) return state;
 
-      // Compute bounding-box center of all target boxes on the XZ plane
-      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-      for (const b of targetBoxes) {
-        minX = Math.min(minX, b.position.x);
-        maxX = Math.max(maxX, b.position.x + b.dimensions.width);
-        minZ = Math.min(minZ, b.position.z);
-        maxZ = Math.max(maxZ, b.position.z + b.dimensions.depth);
-      }
-      const cx = (minX + maxX) / 2;
-      const cz = (minZ + maxZ) / 2;
+      // Compute visual centers for all target boxes
+      const visualCenters = targetBoxes.map((b) =>
+        boxVisualCenter(b.position, b.dimensions, b.rotation)
+      );
 
-      const cos = Math.cos(action.angle);
-      const sin = Math.sin(action.angle);
+      // Compute group pivot as AABB center of visual centers
+      let minX = Infinity, maxX = -Infinity;
+      let minY = Infinity, maxY = -Infinity;
+      let minZ = Infinity, maxZ = -Infinity;
+      for (const vc of visualCenters) {
+        minX = Math.min(minX, vc.x); maxX = Math.max(maxX, vc.x);
+        minY = Math.min(minY, vc.y); maxY = Math.max(maxY, vc.y);
+        minZ = Math.min(minZ, vc.z); maxZ = Math.max(maxZ, vc.z);
+      }
+      const pivot = {
+        x: (minX + maxX) / 2,
+        y: (minY + maxY) / 2,
+        z: (minZ + maxZ) / 2,
+      };
 
       const boxes = allBoxes.map((box) => {
         if (!idSet.has(box.id) || box.locked) return box;
-        // Rotate the box's position around the group center
-        const dx = box.position.x - cx;
-        const dz = box.position.z - cz;
-        const newX = cx + dx * cos - dz * sin;
-        const newZ = cz + dx * sin + dz * cos;
-        return {
-          ...box,
-          position: { ...box.position, x: newX, z: newZ },
-          rotation: box.rotation + action.angle,
-        };
+        // 1. Get current visual center
+        const vc = boxVisualCenter(box.position, box.dimensions, box.rotation);
+        // 2. Rotate visual center around pivot
+        const newVc = rotatePositionAroundAxis(vc, pivot, action.axis, action.angle);
+        // 3. Compute new rotation
+        const newRotation = addRotationOnAxis(box.rotation, action.axis, action.angle);
+        // 4. Back-compute new corner position
+        const newPosition = cornerFromVisualCenter(newVc, box.dimensions, newRotation);
+        return { ...box, position: newPosition, rotation: newRotation };
       });
       return setActiveBoxes(state, boxes);
     }
@@ -377,6 +384,7 @@ function projectReducer(
         ...b,
         position: { ...b.position },
         dimensions: { ...b.dimensions },
+        rotation: { ...b.rotation },
       }));
       return { ...state, historyBatchAnchor: anchor };
     }
@@ -391,6 +399,7 @@ function projectReducer(
           ...b,
           position: { ...b.position },
           dimensions: { ...b.dimensions },
+          rotation: { ...b.rotation },
         }));
         // Rewind history to anchor point, push anchor as "before" and current as "after"
         const anchorSnapshot = state.historyBatchAnchor;
@@ -457,6 +466,7 @@ function projectReducerWithHistory(
         ...b,
         position: { ...b.position },
         dimensions: { ...b.dimensions },
+        rotation: { ...b.rotation },
       }));
       // Truncate any redo history beyond current index
       const history = [
@@ -504,7 +514,7 @@ interface ProjectContextValue {
   toggleSnap: () => void;
   groupSelectedBoxes: () => void;
   ungroupSelectedBoxes: () => void;
-  rotateSelectedBoxes: (angle: number) => void;
+  rotateSelectedBoxes: (angle: number, axis?: 'x' | 'y' | 'z') => void;
   toggleLockSelectedBoxes: () => void;
   toggleVisibilitySelectedBoxes: () => void;
   showToast: (message: string) => void;
@@ -616,7 +626,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         id: uuid(),
         position: { x: posX, y: 0, z: posZ },
         dimensions: defaultDim,
-        rotation: 0,
+        rotation: { ...ZERO_ROTATION },
         materialId,
       };
       dispatch({ type: "ADD_BOX", box });
@@ -865,9 +875,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "UNGROUP_BOXES", ids: state.selectedBoxIds });
   }, [state.selectedBoxIds]);
 
-  const rotateSelectedBoxes = useCallback((angle: number) => {
+  const rotateSelectedBoxes = useCallback((angle: number, axis: 'x' | 'y' | 'z' = 'y') => {
     if (state.selectedBoxIds.length === 0) return;
-    dispatch({ type: "ROTATE_SELECTED", ids: state.selectedBoxIds, angle });
+    dispatch({ type: "ROTATE_SELECTED", ids: state.selectedBoxIds, angle, axis });
   }, [state.selectedBoxIds]);
 
   const toggleLockSelectedBoxes = useCallback(() => {

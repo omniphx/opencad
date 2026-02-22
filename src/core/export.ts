@@ -1,4 +1,5 @@
-import { Project, ComponentTemplate } from '../types';
+import { Project, ComponentTemplate, Box } from '../types';
+import { migrateRotation } from './rotation';
 
 export interface OpenCADExport {
   version: 1;
@@ -52,6 +53,21 @@ export function pickAndParseImportFile(): Promise<OpenCADExport> {
           if (!data.version || !data.project || !Array.isArray(data.project.boxes)) {
             reject(new Error('Invalid OpenCAD file format'));
             return;
+          }
+
+          // Migrate legacy rotation format (number → {x,y,z})
+          const migrateBoxes = (boxes: Box[]) => {
+            for (const box of boxes) {
+              box.rotation = migrateRotation(box.rotation as unknown as number | { x: number; y: number; z: number });
+            }
+          };
+          migrateBoxes(data.project.boxes);
+          if (Array.isArray(data.components)) {
+            for (const comp of data.components) {
+              if (Array.isArray(comp.boxes)) {
+                migrateBoxes(comp.boxes);
+              }
+            }
           }
 
           resolve(data as OpenCADExport);

@@ -5,6 +5,7 @@ import { useProjectStore } from '../../store/projectStore';
 import { DimensionInput } from '../ui/DimensionInput';
 import { MaterialPicker } from '../ui/MaterialPicker';
 import { getMaterialById } from '../../core/materials';
+import { ZERO_ROTATION } from '../../core/rotation';
 
 export function PropertiesPanel() {
   const { selectedBox, selectedBoxIds, updateBox, deleteBox } = useSelection();
@@ -12,6 +13,8 @@ export function PropertiesPanel() {
   const { project } = useProject();
   const [showSaveComponent, setShowSaveComponent] = useState(false);
   const [componentName, setComponentName] = useState('');
+  const [rotateAxis, setRotateAxis] = useState<'x' | 'y' | 'z'>('y');
+  const [customAngle, setCustomAngle] = useState('');
 
   if (selectedBoxIds.length === 0) {
     return null;
@@ -31,25 +34,70 @@ export function PropertiesPanel() {
         {/* Rotate */}
         <div>
           <h3 className="text-slate-600 text-sm font-medium mb-2">Rotate</h3>
+          <div className="flex gap-1 mb-2">
+            {(['x', 'y', 'z'] as const).map((a) => (
+              <button
+                key={a}
+                onClick={() => setRotateAxis(a)}
+                className={`flex-1 px-2 py-1 text-xs font-medium rounded-lg border transition-colors ${
+                  rotateAxis === a
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                }`}
+              >
+                {a.toUpperCase()} Axis
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1 mb-2">
+            <input
+              type="number"
+              value={customAngle}
+              onChange={(e) => setCustomAngle(e.target.value)}
+              placeholder="Angle°"
+              className="flex-1 min-w-0 px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const deg = parseFloat(customAngle);
+                  if (!isNaN(deg)) {
+                    rotateSelectedBoxes((deg * Math.PI) / 180, rotateAxis);
+                    setCustomAngle('');
+                  }
+                }
+              }}
+            />
+            <button
+              onClick={() => {
+                const deg = parseFloat(customAngle);
+                if (!isNaN(deg)) {
+                  rotateSelectedBoxes((deg * Math.PI) / 180, rotateAxis);
+                  setCustomAngle('');
+                }
+              }}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
+            >
+              Apply
+            </button>
+          </div>
           <div className="flex gap-2">
             <button
-              onClick={() => rotateSelectedBoxes(-Math.PI / 2)}
+              onClick={() => rotateSelectedBoxes(-Math.PI / 2, rotateAxis)}
               className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title="Rotate 90° counter-clockwise"
+              title={`Rotate 90° counter-clockwise on ${rotateAxis.toUpperCase()}`}
             >
               ↺ 90°
             </button>
             <button
-              onClick={() => rotateSelectedBoxes(Math.PI / 2)}
+              onClick={() => rotateSelectedBoxes(Math.PI / 2, rotateAxis)}
               className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title="Rotate 90° clockwise"
+              title={`Rotate 90° clockwise on ${rotateAxis.toUpperCase()}`}
             >
               ↻ 90°
             </button>
             <button
-              onClick={() => rotateSelectedBoxes(Math.PI / 4)}
+              onClick={() => rotateSelectedBoxes(Math.PI / 4, rotateAxis)}
               className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title="Rotate 45° clockwise"
+              title={`Rotate 45° clockwise on ${rotateAxis.toUpperCase()}`}
             >
               ↻ 45°
             </button>
@@ -203,7 +251,7 @@ export function PropertiesPanel() {
     updateBox(selectedBox.id, {
       dimensions: newDims,
       position: newPos,
-      rotation: 0,
+      rotation: { ...ZERO_ROTATION },
     });
   };
 
@@ -304,44 +352,65 @@ export function PropertiesPanel() {
         {/* Rotate */}
         <div>
           <h3 className="text-slate-600 text-sm font-medium mb-2">Rotate</h3>
+          <div className="flex gap-1 mb-2">
+            {(['x', 'y', 'z'] as const).map((a) => (
+              <button
+                key={a}
+                onClick={() => setRotateAxis(a)}
+                className={`flex-1 px-2 py-1 text-xs font-medium rounded-lg border transition-colors ${
+                  rotateAxis === a
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                }`}
+              >
+                {a.toUpperCase()} Axis
+              </button>
+            ))}
+          </div>
           <div className="flex gap-2 mb-2">
             <button
-              onClick={() => rotateSelectedBoxes(-Math.PI / 2)}
+              onClick={() => rotateSelectedBoxes(-Math.PI / 2, rotateAxis)}
               className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title="Rotate 90° counter-clockwise"
+              title={`Rotate 90° counter-clockwise on ${rotateAxis.toUpperCase()}`}
             >
               ↺ 90°
             </button>
             <button
-              onClick={() => rotateSelectedBoxes(Math.PI / 2)}
+              onClick={() => rotateSelectedBoxes(Math.PI / 2, rotateAxis)}
               className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title="Rotate 90° clockwise"
+              title={`Rotate 90° clockwise on ${rotateAxis.toUpperCase()}`}
             >
               ↻ 90°
             </button>
             <button
-              onClick={() => rotateSelectedBoxes(Math.PI / 4)}
+              onClick={() => rotateSelectedBoxes(Math.PI / 4, rotateAxis)}
               className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title="Rotate 45° clockwise"
+              title={`Rotate 45° clockwise on ${rotateAxis.toUpperCase()}`}
             >
               ↻ 45°
             </button>
           </div>
-          <div className="flex items-center gap-2 mb-2">
-            <label className="text-slate-500 text-xs w-12">Angle</label>
-            <input
-              type="number"
-              value={Math.round((selectedBox.rotation * 180) / Math.PI * 100) / 100}
-              onChange={(e) => {
-                const deg = parseFloat(e.target.value);
-                if (!isNaN(deg)) {
-                  updateBox(selectedBox.id, { rotation: (deg * Math.PI) / 180 });
-                }
-              }}
-              className="flex-1 px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
-              step={15}
-            />
-            <span className="text-slate-400 text-xs">°</span>
+          <div className="space-y-1 mb-2">
+            {(['x', 'y', 'z'] as const).map((a) => (
+              <div key={a} className="flex items-center gap-2">
+                <label className="text-slate-500 text-xs w-12">{a.toUpperCase()}</label>
+                <input
+                  type="number"
+                  value={Math.round((selectedBox.rotation[a] * 180) / Math.PI * 100) / 100}
+                  onChange={(e) => {
+                    const deg = parseFloat(e.target.value);
+                    if (!isNaN(deg)) {
+                      updateBox(selectedBox.id, {
+                        rotation: { ...selectedBox.rotation, [a]: (deg * Math.PI) / 180 },
+                      });
+                    }
+                  }}
+                  className="flex-1 px-2 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  step={15}
+                />
+                <span className="text-slate-400 text-xs">°</span>
+              </div>
+            ))}
           </div>
           <h4 className="text-slate-500 text-xs font-medium mb-1">Flip Axes</h4>
           <div className="flex gap-2">

@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { Vector3, OrthographicCamera, Plane, Raycaster, Vector2 } from 'three';
+import { Vector3, OrthographicCamera, Plane, Raycaster, Vector2, Euler } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { IsometricCamera } from './IsometricCamera';
 import { Grid } from './Grid';
@@ -121,17 +121,15 @@ function getBoxScreenBounds(
 
   // Local corners relative to position origin (before rotation)
   const localCorners = [
-    [0, 0, 0], [w, 0, 0], [0, h, 0], [w, h, 0],
-    [0, 0, d], [w, 0, d], [0, h, d], [w, h, d],
+    new Vector3(0, 0, 0), new Vector3(w, 0, 0), new Vector3(0, h, 0), new Vector3(w, h, 0),
+    new Vector3(0, 0, d), new Vector3(w, 0, d), new Vector3(0, h, d), new Vector3(w, h, d),
   ];
 
-  // Apply Y-axis rotation around the position origin, then translate
-  const cos = Math.cos(box.rotation);
-  const sin = Math.sin(box.rotation);
-  const corners = localCorners.map(([lx, ly, lz]) => {
-    const rx = lx * cos - lz * sin;
-    const rz = lx * sin + lz * cos;
-    return new Vector3(px + rx, py + ly, pz + rz);
+  // Apply full 3D Euler rotation around the position origin, then translate
+  const euler = new Euler(box.rotation.x, box.rotation.y, box.rotation.z, 'XYZ');
+  const corners = localCorners.map((v) => {
+    v.applyEuler(euler);
+    return new Vector3(px + v.x, py + v.y, pz + v.z);
   });
 
   let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;

@@ -2,7 +2,7 @@ export interface Box {
   id: string;
   position: { x: number; y: number; z: number };  // meters, bottom-left-front corner
   dimensions: { width: number; height: number; depth: number };  // meters
-  rotation: number;  // Y-axis only, radians
+  rotation: { x: number; y: number; z: number };  // Euler angles (radians, XYZ order)
   materialId: string;
   label?: string;
   groupId?: string;

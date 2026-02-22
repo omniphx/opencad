@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
 import { Project, ComponentTemplate } from '../types';
+import { migrateRotation } from './rotation';
 
 const db = new Dexie('OpenCAD') as Dexie & {
   projects: EntityTable<Project, 'id'>;
@@ -13,6 +14,24 @@ db.version(1).stores({
 db.version(2).stores({
   projects: 'id, name',
   components: 'id, name, createdAt',
+});
+
+db.version(3).stores({
+  projects: 'id, name',
+  components: 'id, name, createdAt',
+}).upgrade(tx => {
+  return Promise.all([
+    tx.table('projects').toCollection().modify((project: Project) => {
+      for (const box of project.boxes) {
+        box.rotation = migrateRotation(box.rotation as unknown as number | { x: number; y: number; z: number });
+      }
+    }),
+    tx.table('components').toCollection().modify((component: ComponentTemplate) => {
+      for (const box of component.boxes) {
+        box.rotation = migrateRotation(box.rotation as unknown as number | { x: number; y: number; z: number });
+      }
+    }),
+  ]);
 });
 
 export async function saveProject(project: Project): Promise<void> {
