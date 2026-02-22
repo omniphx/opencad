@@ -1,13 +1,15 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { Vector3, OrthographicCamera } from 'three';
+import { Vector3, OrthographicCamera, Plane, Raycaster, Vector2 } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import { IsometricCamera } from './IsometricCamera';
 import { Grid } from './Grid';
 import { Box3D } from './Box3D';
+import { MeasureOverlay } from './MeasureOverlay';
 import { useProjectStore } from '../../store/projectStore';
 import { snapToGrid } from '../../core/units';
+import { findNearestSnapPoint, measureDistance } from '../../core/measureSnap';
 import { Box } from '../../types';
 
 const MIN_ZOOM = 20;
@@ -186,7 +188,21 @@ function TrackpadHandler({ controlsRef }: { controlsRef: React.RefObject<OrbitCo
   return null;
 }
 
-export function Viewport() {
+// Plane normals for measure raycasting per view
+const MEASURE_PLANE_CONFIG: Record<CameraView, [number, number, number]> = {
+  iso:   [0, 1, 0],
+  top:   [0, 1, 0],
+  front: [0, 0, 1],
+  back:  [0, 0, 1],
+  left:  [1, 0, 0],
+  right: [1, 0, 0],
+};
+
+interface ViewportProps {
+  isMeasuring?: boolean;
+}
+
+export function Viewport({ isMeasuring = false }: ViewportProps) {
   const { state, selectBoxes, toggleBoxSelection, updateBox, showToast, historyBatchStart, historyBatchEnd } = useProjectStore();
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const cameraRef = useRef<OrthographicCamera | null>(null);
@@ -196,6 +212,11 @@ export function Viewport() {
   const marqueeActive = useRef(false);
   const shiftHeld = useRef(false);
   const pointerCapturedByBox = useRef(false);
+
+  // Measure tool state
+  const [measurePointA, setMeasurePointA] = useState<Vector3 | null>(null);
+  const [measurePointB, setMeasurePointB] = useState<Vector3 | null>(null);
+  const [measureHover, setMeasureHover] = useState<Vector3 | null>(null);
 
   const activeBoxes = state.mode === 'component-builder'
     ? (state.currentTemplate?.boxes ?? [])
@@ -216,9 +237,78 @@ export function Viewport() {
     [state.project.unitSystem, state.snapEnabled]
   );
 
+  // Clear measurement when exiting measure mode
+  useEffect(() => {
+    if (!isMeasuring) {
+      setMeasurePointA(null);
+      setMeasurePointB(null);
+      setMeasureHover(null);
+    }
+  }, [isMeasuring]);
+
+  /** Raycast a screen-space mouse event to the view plane, returning the world point */
+  const raycastToViewPlane = useCallback((clientX: number, clientY: number): Vector3 | null => {
+    const camera = cameraRef.current;
+    const container = containerRef.current;
+    if (!camera || !container) return null;
+
+    const rect = container.getBoundingClientRect();
+    const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
+    const ndcY = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+    const normal = MEASURE_PLANE_CONFIG[cameraView];
+    const plane = new Plane(new Vector3(...normal), 0);
+    const raycaster = new Raycaster();
+    raycaster.setFromCamera(new Vector2(ndcX, ndcY), camera);
+
+    const intersect = new Vector3();
+    const hit = raycaster.ray.intersectPlane(plane, intersect);
+    return hit ? intersect : null;
+  }, [cameraView]);
+
+  const handleMeasureClick = useCallback((clientX: number, clientY: number) => {
+    const worldPoint = raycastToViewPlane(clientX, clientY);
+    if (!worldPoint) return;
+
+    const camera = cameraRef.current;
+    const container = containerRef.current;
+    if (!camera || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    const snapped = findNearestSnapPoint(worldPoint, activeBoxes, camera, rect.width, rect.height);
+    const point = snapped ?? worldPoint;
+
+    if (!measurePointA || measurePointB) {
+      // Start new measurement
+      setMeasurePointA(point);
+      setMeasurePointB(null);
+    } else {
+      // Set second point
+      setMeasurePointB(point);
+    }
+  }, [raycastToViewPlane, activeBoxes, measurePointA, measurePointB]);
+
+  const handleMeasureHover = useCallback((clientX: number, clientY: number) => {
+    if (measurePointB) {
+      setMeasureHover(null);
+      return;
+    }
+
+    const worldPoint = raycastToViewPlane(clientX, clientY);
+    if (!worldPoint) return;
+
+    const camera = cameraRef.current;
+    const container = containerRef.current;
+    if (!camera || !container) return;
+
+    const rect = container.getBoundingClientRect();
+    const snapped = findNearestSnapPoint(worldPoint, activeBoxes, camera, rect.width, rect.height);
+    setMeasureHover(snapped ?? worldPoint);
+  }, [raycastToViewPlane, activeBoxes, measurePointB]);
+
   const handleBackgroundClick = () => {
     // Only deselect if not in a marquee drag (marquee handles its own selection)
-    if (!marqueeActive.current) {
+    if (!marqueeActive.current && !isMeasuring) {
       selectBoxes([]);
     }
   };
@@ -226,6 +316,8 @@ export function Viewport() {
   const handleMarqueeMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     // Only start marquee on left click, and only on the container itself (not on UI overlays)
     if (e.button !== 0) return;
+    // Suppress marquee in measure mode
+    if (isMeasuring) return;
     // If a box captured the pointer (R3F event fired first), skip marquee
     if (pointerCapturedByBox.current) return;
     const container = containerRef.current;
@@ -238,7 +330,7 @@ export function Viewport() {
     shiftHeld.current = e.shiftKey;
     setMarquee({ startX: x, startY: y, currentX: x, currentY: y });
     marqueeActive.current = false;
-  }, []);
+  }, [isMeasuring]);
 
   const handleMarqueeMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     setMarquee((prev) => {
@@ -317,13 +409,23 @@ export function Viewport() {
       }
     : null;
 
+  const computedDistance = measurePointA && measurePointB
+    ? measureDistance(measurePointA, measurePointB, cameraView)
+    : null;
+
   return (
     <div
       ref={containerRef}
-      className="flex-1 bg-sky-50 relative"
+      className={`flex-1 bg-sky-50 relative ${isMeasuring ? 'cursor-crosshair' : ''}`}
       onMouseDown={handleMarqueeMouseDown}
-      onMouseMove={handleMarqueeMouseMove}
+      onMouseMove={(e) => {
+        handleMarqueeMouseMove(e);
+        if (isMeasuring) handleMeasureHover(e.clientX, e.clientY);
+      }}
       onMouseUp={handleMarqueeMouseUp}
+      onClick={(e) => {
+        if (isMeasuring) handleMeasureClick(e.clientX, e.clientY);
+      }}
     >
       {marqueeStyle && (
         <div
@@ -385,6 +487,7 @@ export function Viewport() {
             isSelected={state.selectedBoxIds.includes(box.id)}
             selectedBoxIds={state.selectedBoxIds}
             cameraView={cameraView}
+            isMeasuring={isMeasuring}
             onToggleSelect={(id: string) => toggleBoxSelection(id)}
             onSelectGroup={(ids: string[]) => selectBoxes(ids)}
             onToggleSelectGroup={(ids: string[]) => {
@@ -408,6 +511,16 @@ export function Viewport() {
             onHistoryBatchEnd={historyBatchEnd}
           />
         ))}
+
+        {isMeasuring && (
+          <MeasureOverlay
+            pointA={measurePointA}
+            pointB={measurePointB}
+            hoverPoint={measureHover}
+            distance={computedDistance}
+            unitSystem={state.project.unitSystem}
+          />
+        )}
       </Canvas>
     </div>
   );

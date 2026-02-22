@@ -10,6 +10,7 @@ import { Toast } from './components/ui/Toast';
 function AppContent() {
   const { state, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes, dismissToast, undo, redo, canUndo, canRedo, groupSelectedBoxes, ungroupSelectedBoxes } = useProjectStore();
   const [showComponentLibrary, setShowComponentLibrary] = useState(false);
+  const [isMeasuring, setIsMeasuring] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -46,10 +47,21 @@ function AppContent() {
         e.preventDefault();
         deleteSelectedBoxes();
       }
+
+      if (e.key === 'm' || e.key === 'M') {
+        if (!e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          setIsMeasuring((v) => !v);
+        }
+      }
+      if (e.key === 'Escape' && isMeasuring) {
+        e.preventDefault();
+        setIsMeasuring(false);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.selectedBoxIds, state.clipboard, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes, undo, redo, canUndo, canRedo, groupSelectedBoxes, ungroupSelectedBoxes]);
+  }, [state.selectedBoxIds, state.clipboard, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes, undo, redo, canUndo, canRedo, groupSelectedBoxes, ungroupSelectedBoxes, isMeasuring]);
 
   const isBuilderMode = state.mode === 'component-builder';
 
@@ -58,9 +70,11 @@ function AppContent() {
       <Toolbar
         onToggleComponentLibrary={() => setShowComponentLibrary((v) => !v)}
         showComponentLibrary={showComponentLibrary}
+        isMeasuring={isMeasuring}
+        onToggleMeasure={() => setIsMeasuring((v) => !v)}
       />
       <div className="flex-1 flex overflow-hidden relative">
-        <Viewport />
+        <Viewport isMeasuring={isMeasuring} />
         <div className="absolute top-0 right-0 bottom-0 flex">
           <PropertiesPanel />
           {!isBuilderMode && showComponentLibrary && <ComponentLibraryPanel />}

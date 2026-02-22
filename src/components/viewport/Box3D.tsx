@@ -21,6 +21,7 @@ interface Box3DProps {
   isSelected: boolean;
   selectedBoxIds: string[];
   cameraView: CameraView;
+  isMeasuring?: boolean;
   onToggleSelect: (id: string) => void;
   onSelectGroup: (ids: string[]) => void;
   onToggleSelectGroup: (ids: string[]) => void;
@@ -33,7 +34,7 @@ interface Box3DProps {
   onHistoryBatchEnd: () => void;
 }
 
-export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, onToggleSelect, onSelectGroup, onToggleSelectGroup, onMove, onMoveSelected, snap, onShowToast, pointerCapturedByBox, onHistoryBatchStart, onHistoryBatchEnd }: Box3DProps) {
+export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, isMeasuring, onToggleSelect, onSelectGroup, onToggleSelectGroup, onMove, onMoveSelected, snap, onShowToast, pointerCapturedByBox, onHistoryBatchStart, onHistoryBatchEnd }: Box3DProps) {
   const meshRef = useRef<Mesh>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(new Vector3());
@@ -62,6 +63,8 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, o
     : [box.id];
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
+    // In measure mode, let clicks propagate to the viewport's measure handler
+    if (isMeasuring) return;
     e.stopPropagation();
     pointerCapturedByBox.current = true;
     if (e.shiftKey) {
@@ -228,9 +231,9 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, o
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={() => { handlePointerUp(); document.body.style.cursor = 'default'; }}
-        onPointerEnter={() => { if (!box.locked) document.body.style.cursor = 'move'; }}
-        onClick={(e: ThreeEvent<MouseEvent>) => e.stopPropagation()}
+        onPointerLeave={() => { handlePointerUp(); if (!isMeasuring) document.body.style.cursor = 'default'; }}
+        onPointerEnter={() => { if (!isMeasuring && !box.locked) document.body.style.cursor = 'move'; }}
+        onClick={(e: ThreeEvent<MouseEvent>) => { if (!isMeasuring) e.stopPropagation(); }}
       >
         <boxGeometry
           args={[box.dimensions.width, box.dimensions.height, box.dimensions.depth]}
