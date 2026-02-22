@@ -1,4 +1,4 @@
-# OpenCAD
+# Sawdust
 
 A browser-based 3D CAD app for designing structures with material labeling and bill of materials output. Built with React, Three.js, and IndexedDB for fully local, offline-first use.
 
@@ -15,43 +15,91 @@ npm run build     # production build
 - 3D isometric viewport with click-to-select, drag-to-move boxes
 - Material assignment with automatic BOM calculation
 - Angle cuts on box faces using CSG subtraction
-- Export/Import projects as `.opencad.json` files
+- Export/Import projects as `.sawdust.json` files
 - Local persistence via IndexedDB (no backend required)
 
 ---
 
 ## MCP Server (AI Integration)
 
-The MCP server lets AI assistants like Claude Desktop read and modify your OpenCAD projects via tool calls. The workflow is file-based: export your project, let the AI modify it, then import it back.
+The MCP server lets AI assistants read and modify your Sawdust projects via tool calls. The workflow is file-based: export your project, let the AI modify it, then import it back.
+
+### Usage
+
+1. In the Sawdust app, click **Export** — saves `MyProject.sawdust.json` to your Downloads folder
+2. Configure your AI tool (see below) pointing to that file
+3. Ask the AI to modify your project — it will call the available tools
+4. In the Sawdust app, click **Import** and select the same file to load the changes
 
 ### Setup
 
-**Configure Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+Replace `/path/to/MyProject.sawdust.json` with the actual path to your exported file.
+
+#### Claude Desktop
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "opencad": {
+    "sawdust": {
       "command": "npx",
-      "args": [
-        "-y",
-        "@omniphx/sawdust-mcp",
-        "--file",
-        "/absolute/path/to/MyProject.opencad.json"
-      ]
+      "args": ["-y", "@omniphx/sawdust-mcp", "--file", "/path/to/MyProject.sawdust.json"]
     }
   }
 }
 ```
 
-Replace the `--file` path with the location of your exported `.opencad.json` file. Restart Claude Desktop after saving.
+Restart Claude Desktop after saving.
 
-### Usage
+#### Claude Code
 
-1. In the OpenCAD app, click **Export** — this saves `MyProject.opencad.json` to your Downloads folder
-2. Move/reference the file in your Claude Desktop config (see above)
-3. In Claude Desktop, ask Claude to modify your project — it will call the available tools
-4. In the OpenCAD app, click **Import** and select the same `.opencad.json` file to load the changes
+```bash
+claude mcp add --scope user sawdust -- npx -y @omniphx/sawdust-mcp --file /path/to/MyProject.sawdust.json
+```
+
+#### Cursor
+
+Add to `.cursor/mcp.json` in your project root (or `~/.cursor/mcp.json` for global):
+
+```json
+{
+  "sawdust": {
+    "command": "npx",
+    "args": ["-y", "@omniphx/sawdust-mcp", "--file", "/path/to/MyProject.sawdust.json"]
+  }
+}
+```
+
+Restart Cursor after saving.
+
+#### OpenCode
+
+Add to `opencode.json` in your project root (or `~/.config/opencode/opencode.json` for global):
+
+```json
+{
+  "mcp": {
+    "sawdust": {
+      "type": "local",
+      "command": ["npx", "-y", "@omniphx/sawdust-mcp", "--file", "/path/to/MyProject.sawdust.json"]
+    }
+  }
+}
+```
+
+#### Codex CLI
+
+```bash
+codex mcp add sawdust -- npx -y @omniphx/sawdust-mcp --file /path/to/MyProject.sawdust.json
+```
+
+Or manually in `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.sawdust]
+command = ["npx", "-y", "@omniphx/sawdust-mcp", "--file", "/path/to/MyProject.sawdust.json"]
+```
 
 ### Available Tools
 
@@ -78,5 +126,5 @@ Replace the `--file` path with the location of your exported `.opencad.json` fil
 
 - All dimension and position values are in **meters**
 - Material IDs (e.g. `2x4-lumber`, `plywood-3-4`) can be found via `list_materials`
-- The server reads and writes the `.opencad.json` file directly on disk — changes are immediate
-- To switch projects, update the `--file` path in your Claude Desktop config and restart
+- The server reads and writes the `.sawdust.json` file directly on disk — changes are immediate
+- To switch projects, update the `--file` path in your config and restart
