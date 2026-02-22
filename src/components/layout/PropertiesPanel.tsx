@@ -25,12 +25,68 @@ export function PropertiesPanel() {
     const selectedBoxesArr = getSelectedBoxes();
     const allLocked = selectedBoxesArr.every((b) => b.locked);
     const allHidden = selectedBoxesArr.every((b) => b.hidden);
+
+    // Compute bounding box min corner (group position)
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    for (const b of selectedBoxesArr) {
+      minX = Math.min(minX, b.position.x);
+      minY = Math.min(minY, b.position.y);
+      minZ = Math.min(minZ, b.position.z);
+    }
+
+    // User-facing axes: User X = Three.js Z, User Y = Three.js X, User Z = Three.js Y
+    const groupUserPosition = { x: minZ, y: minX, z: minY };
+
+    const handleGroupPositionChange = (userAxis: 'x' | 'y' | 'z', value: number) => {
+      const internalAxis: 'x' | 'y' | 'z' = userAxis === 'x' ? 'z' : userAxis === 'y' ? 'x' : 'y';
+      const oldValue = internalAxis === 'x' ? minX : internalAxis === 'y' ? minY : minZ;
+      const delta = value - oldValue;
+      if (delta === 0) return;
+
+      historyBatchStart();
+      for (const b of selectedBoxesArr) {
+        updateBox(b.id, {
+          position: { ...b.position, [internalAxis]: b.position[internalAxis] + delta },
+        });
+      }
+      historyBatchEnd();
+    };
+
     return (
       <div className="w-72 bg-white border-l border-slate-200 p-4 overflow-y-auto">
         <h2 className="text-slate-800 font-semibold mb-4">Properties</h2>
         <p className="text-slate-600 text-sm mb-4">
           {selectedBoxIds.length} items selected
         </p>
+
+        {/* Position */}
+        <div className="mb-6">
+          <h3 className="text-slate-600 text-sm font-medium mb-2">Position</h3>
+          <div className="space-y-2">
+            <DimensionInput
+              label="X"
+              value={groupUserPosition.x}
+              unitSystem={project.unitSystem}
+              onChange={(v) => handleGroupPositionChange('x', v)}
+              min={-100}
+            />
+            <DimensionInput
+              label="Y"
+              value={groupUserPosition.y}
+              unitSystem={project.unitSystem}
+              onChange={(v) => handleGroupPositionChange('y', v)}
+              min={-100}
+            />
+            <DimensionInput
+              label="Z"
+              value={groupUserPosition.z}
+              unitSystem={project.unitSystem}
+              onChange={(v) => handleGroupPositionChange('z', v)}
+              min={0}
+            />
+          </div>
+        </div>
+
         {/* Rotate */}
         <div>
           <h3 className="text-slate-600 text-sm font-medium mb-2">Rotate</h3>
