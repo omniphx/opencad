@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useProjectStore } from '../../store/projectStore';
 import { useProject } from '../../hooks/useProject';
 import { DEFAULT_MATERIALS } from '../../core/materials';
+import { exportProject } from '../../core/export';
 
 interface ToolbarProps {
   onToggleComponentLibrary?: () => void;
@@ -209,6 +210,16 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary }: Tool
       )}
 
       <div className="flex-1" />
+
+      <button
+        onClick={() => exportProject(project, state.componentLibrary)}
+        className="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200"
+        title="Export project"
+      >
+        Export
+      </button>
+
+      <div className="h-6 w-px bg-slate-200" />
 
       <div className="flex items-center gap-2">
         <span className="text-slate-400 text-sm">Units:</span>
