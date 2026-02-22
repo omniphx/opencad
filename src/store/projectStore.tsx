@@ -15,6 +15,7 @@ import {
   getAllComponents,
   deleteComponent as deleteComponentFromDb,
 } from "../core/storage";
+import { pickAndParseImportFile } from "../core/export";
 import { DEFAULT_MATERIALS, getMaterialById } from "../core/materials";
 import { placeComponentBoxes } from "../core/placement";
 import { normalizeUnitSystem } from "../core/units";
@@ -473,6 +474,7 @@ interface ProjectContextValue {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  importProject: () => void;
   historyBatchStart: () => void;
   historyBatchEnd: () => void;
 }
@@ -858,6 +860,25 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "HISTORY_BATCH_END" });
   }, []);
 
+  const importProjectAction = useCallback(() => {
+    pickAndParseImportFile()
+      .then((data) => {
+        dispatch({ type: "SET_PROJECT", project: data.project });
+        saveProject(data.project);
+
+        const components = data.components ?? [];
+        for (const c of components) {
+          saveComponentToDb(c);
+        }
+        dispatch({ type: "LOAD_COMPONENTS", components });
+      })
+      .catch((err) => {
+        if (err?.message !== "No file selected") {
+          dispatch({ type: "SHOW_TOAST", message: err?.message ?? "Import failed" });
+        }
+      });
+  }, []);
+
   const canUndo = state.historyIndex > 0;
   const canRedo = state.historyIndex < state.history.length - 1;
 
@@ -885,6 +906,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         cancelComponentBuilder,
         placeComponent,
         deleteComponentTemplate,
+        importProject: importProjectAction,
         toggleSnap,
         groupSelectedBoxes,
         ungroupSelectedBoxes,

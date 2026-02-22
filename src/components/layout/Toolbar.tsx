@@ -10,7 +10,7 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ onToggleComponentLibrary, showComponentLibrary }: ToolbarProps) {
-  const { state, addBox, saveComponent, cancelComponentBuilder, toggleSnap, groupSelectedBoxes, ungroupSelectedBoxes, toggleLockSelectedBoxes, getSelectedBoxes, undo, redo, canUndo, canRedo } = useProjectStore();
+  const { state, addBox, saveComponent, cancelComponentBuilder, toggleSnap, groupSelectedBoxes, ungroupSelectedBoxes, toggleLockSelectedBoxes, getSelectedBoxes, undo, redo, canUndo, canRedo, importProject } = useProjectStore();
   const { project, setUnitSystem } = useProject();
 
   const selectedBoxes = getSelectedBoxes();
@@ -210,6 +210,14 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary }: Tool
       )}
 
       <div className="flex-1" />
+
+      <button
+        onClick={importProject}
+        className="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200"
+        title="Import project"
+      >
+        Import
+      </button>
 
       <button
         onClick={() => exportProject(project, state.componentLibrary)}

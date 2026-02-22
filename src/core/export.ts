@@ -30,3 +30,39 @@ export function exportProject(
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+export function pickAndParseImportFile(): Promise<OpenCADExport> {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,.opencad.json';
+
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) {
+        reject(new Error('No file selected'));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result as string);
+
+          if (!data.version || !data.project || !Array.isArray(data.project.boxes)) {
+            reject(new Error('Invalid OpenCAD file format'));
+            return;
+          }
+
+          resolve(data as OpenCADExport);
+        } catch {
+          reject(new Error('Failed to parse file as JSON'));
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
+    };
+
+    input.click();
+  });
+}
