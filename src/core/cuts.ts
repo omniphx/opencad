@@ -18,7 +18,7 @@ interface CutterProps {
  * Coordinate system: box centered at origin with dimensions (w, h, d).
  * - top/bottom: normal along Y, pivot around X (cuts across width)
  * - front/back: normal along Z, pivot around X (cuts across width)
- * - left/right: normal along X, pivot around Z (cuts across depth)
+ * - left/right: normal along X, pivot around Y (miter cut — diagonal across depth when viewed from above)
  */
 interface FaceConfig {
   // Which axis is the face normal
@@ -36,8 +36,8 @@ const FACE_CONFIG: Record<CutFace, FaceConfig> = {
   bottom: { normalAxis: 'y', normalDir: -1, pivotAxis: 'x', rotationSign: -1 },
   front:  { normalAxis: 'z', normalDir:  1, pivotAxis: 'x', rotationSign: -1 },
   back:   { normalAxis: 'z', normalDir: -1, pivotAxis: 'x', rotationSign:  1 },
-  right:  { normalAxis: 'x', normalDir:  1, pivotAxis: 'z', rotationSign: -1 },
-  left:   { normalAxis: 'x', normalDir: -1, pivotAxis: 'z', rotationSign:  1 },
+  right:  { normalAxis: 'x', normalDir:  1, pivotAxis: 'y', rotationSign: -1 },
+  left:   { normalAxis: 'x', normalDir: -1, pivotAxis: 'y', rotationSign:  1 },
 };
 
 /**
