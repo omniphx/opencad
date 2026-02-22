@@ -374,7 +374,7 @@ export function Viewport() {
           <meshBasicMaterial transparent opacity={0} />
         </mesh>
 
-        {activeBoxes.filter((box) => !box.hidden).map((box) => (
+        {activeBoxes.map((box) => (
           <Box3D
             key={box.id}
             box={box}

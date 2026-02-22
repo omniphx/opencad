@@ -250,8 +250,8 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, o
           color={color}
           emissive={isSelected ? '#3b82f6' : '#000000'}
           emissiveIntensity={isSelected ? 0.2 : 0}
-          transparent={isSelected}
-          opacity={isSelected ? 0.85 : 1}
+          transparent={isSelected || !!box.hidden}
+          opacity={box.hidden ? 0.15 : isSelected ? 0.85 : 1}
         />
       </mesh>
 
@@ -261,6 +261,8 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, o
         <lineBasicMaterial
           color={isSelected ? '#3b82f6' : '#00000040'}
           linewidth={2}
+          transparent={!!box.hidden}
+          opacity={box.hidden ? 0.15 : 1}
         />
       </lineSegments>
 
