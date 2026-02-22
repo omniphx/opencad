@@ -105,7 +105,7 @@ export function PropertiesPanel() {
               </button>
             ))}
           </div>
-          <div className="flex gap-1 mb-2">
+          <div className="flex gap-1">
             <input
               type="number"
               value={customAngle}
@@ -133,29 +133,6 @@ export function PropertiesPanel() {
               className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
             >
               Apply
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => rotateSelectedBoxes(-Math.PI / 2, rotateAxis)}
-              className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title={`Rotate 90° counter-clockwise on ${rotateAxis.toUpperCase()}`}
-            >
-              ↺ 90°
-            </button>
-            <button
-              onClick={() => rotateSelectedBoxes(Math.PI / 2, rotateAxis)}
-              className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title={`Rotate 90° clockwise on ${rotateAxis.toUpperCase()}`}
-            >
-              ↻ 90°
-            </button>
-            <button
-              onClick={() => rotateSelectedBoxes(Math.PI / 4, rotateAxis)}
-              className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title={`Rotate 45° clockwise on ${rotateAxis.toUpperCase()}`}
-            >
-              ↻ 45°
             </button>
           </div>
         </div>
@@ -422,29 +399,6 @@ export function PropertiesPanel() {
                 {a.toUpperCase()} Axis
               </button>
             ))}
-          </div>
-          <div className="flex gap-2 mb-2">
-            <button
-              onClick={() => rotateSelectedBoxes(-Math.PI / 2, rotateAxis)}
-              className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title={`Rotate 90° counter-clockwise on ${rotateAxis.toUpperCase()}`}
-            >
-              ↺ 90°
-            </button>
-            <button
-              onClick={() => rotateSelectedBoxes(Math.PI / 2, rotateAxis)}
-              className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title={`Rotate 90° clockwise on ${rotateAxis.toUpperCase()}`}
-            >
-              ↻ 90°
-            </button>
-            <button
-              onClick={() => rotateSelectedBoxes(Math.PI / 4, rotateAxis)}
-              className="flex-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg border border-slate-300 transition-colors"
-              title={`Rotate 45° clockwise on ${rotateAxis.toUpperCase()}`}
-            >
-              ↻ 45°
-            </button>
           </div>
           <div className="space-y-1 mb-2">
             {(['x', 'y', 'z'] as const).map((a) => (
