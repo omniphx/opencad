@@ -26,12 +26,13 @@ export function rotatePositionAroundAxis(
 
   if (axis === 'y') {
     // Rotate around Y axis (XZ plane)
+    // Y rotation matrix: [cos, 0, sin; 0, 1, 0; -sin, 0, cos]
     const dx = pos.x - center.x;
     const dz = pos.z - center.z;
     return {
-      x: center.x + dx * cos - dz * sin,
+      x: center.x + dx * cos + dz * sin,
       y: pos.y,
-      z: center.z + dx * sin + dz * cos,
+      z: center.z - dx * sin + dz * cos,
     };
   } else if (axis === 'x') {
     // Rotate around X axis (YZ plane)
