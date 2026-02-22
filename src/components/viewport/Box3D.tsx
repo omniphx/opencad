@@ -1,10 +1,10 @@
 import { useRef, useState, useMemo, useCallback } from 'react';
 import { ThreeEvent, useThree, useFrame } from '@react-three/fiber';
-import { Mesh, Vector3, BoxGeometry, Plane, BufferGeometry, DoubleSide } from 'three';
-import { Geometry, Base, Subtraction, CSGGeometryRef } from '@react-three/csg';
+import { Mesh, Vector3, BoxGeometry, Plane, BufferGeometry } from 'three';
+import { Geometry, Base, Subtraction, Intersection, CSGGeometryRef } from '@react-three/csg';
 import { Box } from '../../types';
 import { getMaterialColor } from '../../core/materials';
-import { buildCutterProps, buildCutPlaneVizProps } from '../../core/cuts';
+import { buildCutterProps } from '../../core/cuts';
 import type { CameraView } from './Viewport';
 
 // Per-view drag config: which plane to drag on and which axis stays fixed
@@ -312,16 +312,21 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, i
         />
       </lineSegments>
 
-      {/* Cut plane visualization — shown when selected */}
-      {isSelected && box.cuts?.map((cut) => {
-        const viz = buildCutPlaneVizProps(box.dimensions, cut);
+      {/* Cut volume visualization — removed material shown in red */}
+      {box.cuts?.map((cut) => {
+        const props = buildCutterProps(box.dimensions, cut);
         return (
-          <group key={`plane-${cut.id}`} position={[offsetX + viz.groupPosition[0], offsetY + viz.groupPosition[1], offsetZ + viz.groupPosition[2]]} rotation={viz.groupRotation}>
-            <mesh position={viz.meshPosition} rotation={viz.meshRotation}>
-              <planeGeometry args={viz.planeArgs} />
-              <meshBasicMaterial color="#f97316" transparent opacity={0.35} side={DoubleSide} depthWrite={false} />
-            </mesh>
-          </group>
+          <mesh key={`cutviz-${cut.id}`} position={[offsetX, offsetY, offsetZ]}>
+            <Geometry>
+              <Base>
+                <boxGeometry args={[box.dimensions.width, box.dimensions.height, box.dimensions.depth]} />
+              </Base>
+              <Intersection position={props.position} rotation={props.rotation} scale={props.scale}>
+                <boxGeometry />
+              </Intersection>
+            </Geometry>
+            <meshBasicMaterial color="#ef4444" transparent opacity={0.45} depthWrite={false} />
+          </mesh>
         );
       })}
 
