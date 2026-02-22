@@ -117,17 +117,20 @@ function getBoxScreenBounds(
   const { x: px, y: py, z: pz } = box.position;
   const { width: w, height: h, depth: d } = box.dimensions;
 
-  // Project all 8 corners of the box's bounding box
-  const corners = [
-    new Vector3(px, py, pz),
-    new Vector3(px + w, py, pz),
-    new Vector3(px, py + h, pz),
-    new Vector3(px + w, py + h, pz),
-    new Vector3(px, py, pz + d),
-    new Vector3(px + w, py, pz + d),
-    new Vector3(px, py + h, pz + d),
-    new Vector3(px + w, py + h, pz + d),
+  // Local corners relative to position origin (before rotation)
+  const localCorners = [
+    [0, 0, 0], [w, 0, 0], [0, h, 0], [w, h, 0],
+    [0, 0, d], [w, 0, d], [0, h, d], [w, h, d],
   ];
+
+  // Apply Y-axis rotation around the position origin, then translate
+  const cos = Math.cos(box.rotation);
+  const sin = Math.sin(box.rotation);
+  const corners = localCorners.map(([lx, ly, lz]) => {
+    const rx = lx * cos - lz * sin;
+    const rz = lx * sin + lz * cos;
+    return new Vector3(px + rx, py + ly, pz + rz);
+  });
 
   let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
 

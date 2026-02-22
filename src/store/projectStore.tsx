@@ -59,6 +59,7 @@ type ProjectAction =
   | { type: "TOGGLE_SNAP" }
   | { type: "GROUP_BOXES"; ids: string[]; groupId: string }
   | { type: "UNGROUP_BOXES"; ids: string[] }
+  | { type: "ROTATE_SELECTED"; ids: string[]; angle: number }
   | { type: "TOGGLE_LOCK"; ids: string[] }
   | { type: "TOGGLE_VISIBILITY"; ids: string[] }
   | { type: "SHOW_TOAST"; message: string }
@@ -276,6 +277,42 @@ function projectReducer(
       return setActiveBoxes(state, boxes);
     }
 
+    case "ROTATE_SELECTED": {
+      const idSet = new Set(action.ids);
+      const allBoxes = getActiveBoxes(state);
+      const targetBoxes = allBoxes.filter((b) => idSet.has(b.id) && !b.locked);
+      if (targetBoxes.length === 0) return state;
+
+      // Compute bounding-box center of all target boxes on the XZ plane
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (const b of targetBoxes) {
+        minX = Math.min(minX, b.position.x);
+        maxX = Math.max(maxX, b.position.x + b.dimensions.width);
+        minZ = Math.min(minZ, b.position.z);
+        maxZ = Math.max(maxZ, b.position.z + b.dimensions.depth);
+      }
+      const cx = (minX + maxX) / 2;
+      const cz = (minZ + maxZ) / 2;
+
+      const cos = Math.cos(action.angle);
+      const sin = Math.sin(action.angle);
+
+      const boxes = allBoxes.map((box) => {
+        if (!idSet.has(box.id) || box.locked) return box;
+        // Rotate the box's position around the group center
+        const dx = box.position.x - cx;
+        const dz = box.position.z - cz;
+        const newX = cx + dx * cos - dz * sin;
+        const newZ = cz + dx * sin + dz * cos;
+        return {
+          ...box,
+          position: { ...box.position, x: newX, z: newZ },
+          rotation: box.rotation + action.angle,
+        };
+      });
+      return setActiveBoxes(state, boxes);
+    }
+
     case "TOGGLE_LOCK": {
       const idSet = new Set(action.ids);
       const targetBoxes = getActiveBoxes(state).filter((b) => idSet.has(b.id));
@@ -389,6 +426,7 @@ const BOX_MUTATING_ACTIONS = new Set<ProjectAction["type"]>([
   "DUPLICATE_BOXES",
   "PASTE_BOXES",
   "DELETE_SELECTED_BOXES",
+  "ROTATE_SELECTED",
   "GROUP_BOXES",
   "UNGROUP_BOXES",
   "TOGGLE_LOCK",
@@ -466,6 +504,7 @@ interface ProjectContextValue {
   toggleSnap: () => void;
   groupSelectedBoxes: () => void;
   ungroupSelectedBoxes: () => void;
+  rotateSelectedBoxes: (angle: number) => void;
   toggleLockSelectedBoxes: () => void;
   toggleVisibilitySelectedBoxes: () => void;
   showToast: (message: string) => void;
@@ -826,6 +865,11 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "UNGROUP_BOXES", ids: state.selectedBoxIds });
   }, [state.selectedBoxIds]);
 
+  const rotateSelectedBoxes = useCallback((angle: number) => {
+    if (state.selectedBoxIds.length === 0) return;
+    dispatch({ type: "ROTATE_SELECTED", ids: state.selectedBoxIds, angle });
+  }, [state.selectedBoxIds]);
+
   const toggleLockSelectedBoxes = useCallback(() => {
     if (state.selectedBoxIds.length === 0) return;
     dispatch({ type: "TOGGLE_LOCK", ids: state.selectedBoxIds });
@@ -910,6 +954,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
         toggleSnap,
         groupSelectedBoxes,
         ungroupSelectedBoxes,
+        rotateSelectedBoxes,
         toggleLockSelectedBoxes,
         toggleVisibilitySelectedBoxes,
         showToast,
