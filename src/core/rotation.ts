@@ -65,24 +65,24 @@ export function addRotationOnAxis(
 
 /**
  * Applies an Euler rotation (XYZ order) to a vector.
- * Returns the rotated vector as {x, y, z}.
+ * Three.js 'XYZ' Euler computes R = Rx * Ry * Rz, so when applied to
+ * a vector: R * v = Rx(Ry(Rz(v))). We must apply Z first, then Y, then X.
  */
 export function applyEulerToVec(
   v: { x: number; y: number; z: number },
   rot: Rotation3,
 ): { x: number; y: number; z: number } {
-  // Apply rotations in XYZ order (matching Three.js default Euler order)
   let { x, y, z } = v;
 
-  // Rotate around X
-  if (rot.x !== 0) {
-    const cos = Math.cos(rot.x), sin = Math.sin(rot.x);
-    const ny = y * cos - z * sin;
-    const nz = y * sin + z * cos;
-    y = ny; z = nz;
+  // 1. Rotate around Z first
+  if (rot.z !== 0) {
+    const cos = Math.cos(rot.z), sin = Math.sin(rot.z);
+    const nx = x * cos - y * sin;
+    const ny = x * sin + y * cos;
+    x = nx; y = ny;
   }
 
-  // Rotate around Y
+  // 2. Then rotate around Y
   if (rot.y !== 0) {
     const cos = Math.cos(rot.y), sin = Math.sin(rot.y);
     const nx = x * cos + z * sin;
@@ -90,12 +90,12 @@ export function applyEulerToVec(
     x = nx; z = nz;
   }
 
-  // Rotate around Z
-  if (rot.z !== 0) {
-    const cos = Math.cos(rot.z), sin = Math.sin(rot.z);
-    const nx = x * cos - y * sin;
-    const ny = x * sin + y * cos;
-    x = nx; y = ny;
+  // 3. Then rotate around X
+  if (rot.x !== 0) {
+    const cos = Math.cos(rot.x), sin = Math.sin(rot.x);
+    const ny = y * cos - z * sin;
+    const nz = y * sin + z * cos;
+    y = ny; z = nz;
   }
 
   return { x, y, z };
