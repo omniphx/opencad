@@ -159,6 +159,18 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary, isMeas
           >
             Cancel
           </button>
+          <div className="h-6 w-px bg-slate-200" />
+          <button
+            onClick={onToggleWallMode}
+            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              isWallMode
+                ? 'bg-amber-500 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+            title="Auto-Stud (W)"
+          >
+            Auto-Stud
+          </button>
         </>
       ) : (
         <>
