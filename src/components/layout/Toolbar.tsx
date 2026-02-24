@@ -223,19 +223,6 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary, isMeas
             </>
           )}
 
-          <div className="h-6 w-px bg-slate-200" />
-          <button
-            onClick={onToggleMeasure}
-            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-              isMeasuring
-                ? 'bg-red-500 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
-            title="Measure (M)"
-          >
-            Measure
-          </button>
-
           <button
             onClick={onToggleWallMode}
             className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -249,6 +236,19 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary, isMeas
           </button>
         </>
       )}
+
+      <div className="h-6 w-px bg-slate-200" />
+      <button
+        onClick={onToggleMeasure}
+        className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+          isMeasuring
+            ? 'bg-red-500 text-white shadow-sm'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+        }`}
+        title="Measure (M)"
+      >
+        Measure
+      </button>
 
       <div className="flex-1" />
 

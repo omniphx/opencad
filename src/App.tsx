@@ -12,7 +12,7 @@ import { generateStudWall } from './core/studs';
 import { v4 as uuid } from 'uuid';
 
 function AppContent() {
-  const { state, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes, dismissToast, undo, redo, canUndo, canRedo, groupSelectedBoxes, ungroupSelectedBoxes, addBoxes } = useProjectStore();
+  const { state, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes, dismissToast, undo, redo, canUndo, canRedo, groupSelectedBoxes, ungroupSelectedBoxes, addBoxes, deleteBox } = useProjectStore();
   const [showComponentLibrary, setShowComponentLibrary] = useState(false);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isWallMode, setIsWallMode] = useState(false);
@@ -110,6 +110,7 @@ function AppContent() {
       groupId,
     );
     addBoxes(boxes);
+    deleteBox(wallTargetFace.sourceBoxId);
     setWallTargetFace(null);
     setIsWallMode(false);
   };

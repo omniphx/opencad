@@ -189,6 +189,8 @@ export function generateStudWall(
   // ── Continuous studs ──────────────────────────────────────────────────────
   // Stud layout: first stud at x=0 (left end stud), then at studSpacing intervals
   // Skip studs that fall inside an opening zone
+  // Track placed stud X positions to avoid duplicating the right end stud
+  const placedStudX = new Set<number>();
   let x = 0;
   while (x <= wallLength) {
     const inZone = openingZones.some((z) => x >= z.left - 0.001 && x < z.right - 0.001);
@@ -197,12 +199,27 @@ export function generateStudWall(
       const studRight = x + STUD_W;
       if (studRight <= wallLength + 0.001) {
         boxes.push(mk(x, PLATE_H, 0, STUD_W, interiorH, wallDepth, studMaterialId, 'Stud'));
+        placedStudX.add(Math.round(x * 1e6));
       }
     }
     if (x === 0) {
       x = studSpacing;
     } else {
       x += studSpacing;
+    }
+  }
+
+  // ── Right end stud ────────────────────────────────────────────────────────
+  // Always place a stud flush with the right end of the wall unless it's
+  // already covered by a regular stud or falls inside an opening zone.
+  const rightStudX = wallLength - STUD_W;
+  if (rightStudX > 0.001) {
+    const alreadyPlaced = placedStudX.has(Math.round(rightStudX * 1e6));
+    const inZone = openingZones.some(
+      (z) => rightStudX >= z.left - 0.001 && rightStudX < z.right - 0.001,
+    );
+    if (!alreadyPlaced && !inZone) {
+      boxes.push(mk(rightStudX, PLATE_H, 0, STUD_W, interiorH, wallDepth, studMaterialId, 'Stud'));
     }
   }
 
