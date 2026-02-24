@@ -37,7 +37,7 @@ export function registerProjectTools(server: McpServer, filePath: string): void 
 
   server.tool(
     'clear_project',
-    'Remove all boxes from the project, leaving an empty canvas. Optionally reset the project name.',
+    'Remove all boxes from the project, leaving an empty canvas. Components (templates) are preserved. Optionally reset the project name.',
     {
       resetName: z.boolean().optional().describe('If true, reset the project name to "Untitled Project"'),
     },
