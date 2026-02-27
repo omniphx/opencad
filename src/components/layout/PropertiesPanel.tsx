@@ -10,7 +10,7 @@ import { ZERO_ROTATION } from '../../core/rotation';
 
 export function PropertiesPanel() {
   const { selectedBox, selectedBoxIds, updateBox, deleteBox } = useSelection();
-  const { duplicateSelectedBoxes, deleteSelectedBoxes, toggleLockSelectedBoxes, toggleVisibilitySelectedBoxes, rotateSelectedBoxes, getSelectedBoxes, createComponentFromSelected, historyBatchStart, historyBatchEnd } = useProjectStore();
+  const { duplicateSelectedBoxes, deleteSelectedBoxes, toggleLockSelectedBoxes, toggleVisibilitySelectedBoxes, rotateSelectedBoxes, getSelectedBoxes, createComponentFromSelected, historyBatchStart, historyBatchEnd, groupSelectedBoxes, ungroupSelectedBoxes } = useProjectStore();
   const { project } = useProject();
   const [showSaveComponent, setShowSaveComponent] = useState(false);
   const [componentName, setComponentName] = useState('');
@@ -26,6 +26,8 @@ export function PropertiesPanel() {
     const selectedBoxesArr = getSelectedBoxes();
     const allLocked = selectedBoxesArr.every((b) => b.locked);
     const allHidden = selectedBoxesArr.every((b) => b.hidden);
+    const canGroup = selectedBoxesArr.length >= 2;
+    const canUngroup = selectedBoxesArr.some((b) => b.groupId);
 
     // Compute bounding box min corner (group position)
     let minX = Infinity, minY = Infinity, minZ = Infinity;
@@ -139,6 +141,22 @@ export function PropertiesPanel() {
         </div>
 
         <div className="space-y-2 mt-4">
+          {canGroup && (
+            <button
+              onClick={() => groupSelectedBoxes()}
+              className="w-full px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+            >
+              Group
+            </button>
+          )}
+          {canUngroup && (
+            <button
+              onClick={() => ungroupSelectedBoxes()}
+              className="w-full px-4 py-2 bg-teal-100 hover:bg-teal-200 text-teal-800 text-sm font-medium rounded-lg shadow-sm transition-colors"
+            >
+              Ungroup
+            </button>
+          )}
           <button
             onClick={() => toggleLockSelectedBoxes()}
             className="w-full px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
@@ -458,6 +476,14 @@ export function PropertiesPanel() {
 
         {/* Actions */}
         <div className="space-y-2">
+          {selectedBox.groupId && (
+            <button
+              onClick={() => ungroupSelectedBoxes()}
+              className="w-full px-4 py-2 bg-teal-100 hover:bg-teal-200 text-teal-800 text-sm font-medium rounded-lg shadow-sm transition-colors"
+            >
+              Ungroup
+            </button>
+          )}
           <button
             onClick={() => toggleLockSelectedBoxes()}
             className="w-full px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"

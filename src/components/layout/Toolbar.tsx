@@ -14,14 +14,8 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ onToggleComponentLibrary, showComponentLibrary, isMeasuring, onToggleMeasure, isWallMode, onToggleWallMode }: ToolbarProps) {
-  const { state, addBox, saveComponent, cancelComponentBuilder, toggleSnap, groupSelectedBoxes, ungroupSelectedBoxes, toggleLockSelectedBoxes, getSelectedBoxes, undo, redo, canUndo, canRedo, importProject } = useProjectStore();
+  const { state, addBox, saveComponent, cancelComponentBuilder, toggleSnap, undo, redo, canUndo, canRedo, importProject } = useProjectStore();
   const { project, setUnitSystem } = useProject();
-
-  const selectedBoxes = getSelectedBoxes();
-  const canGroup = selectedBoxes.length >= 2;
-  const canUngroup = selectedBoxes.length > 0 && selectedBoxes.some((b) => b.groupId);
-  const hasSelection = selectedBoxes.length > 0;
-  const allLocked = hasSelection && selectedBoxes.every((b) => b.locked);
   const [componentName, setComponentName] = useState(state.currentTemplate?.name ?? '');
   const [showMaterialMenu, setShowMaterialMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -184,44 +178,6 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary, isMeas
           >
             Components
           </button>
-
-          {(canGroup || canUngroup) && (
-            <>
-              <div className="h-6 w-px bg-slate-200" />
-              {canGroup && (
-                <button
-                  onClick={groupSelectedBoxes}
-                  className="px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200"
-                >
-                  Group
-                </button>
-              )}
-              {canUngroup && (
-                <button
-                  onClick={ungroupSelectedBoxes}
-                  className="px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200"
-                >
-                  Ungroup
-                </button>
-              )}
-            </>
-          )}
-
-          {hasSelection && (
-            <>
-              <div className="h-6 w-px bg-slate-200" />
-              <button
-                onClick={toggleLockSelectedBoxes}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  allLocked
-                    ? 'bg-amber-500 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                {allLocked ? 'Unlock' : 'Lock'}
-              </button>
-            </>
-          )}
 
           <button
             onClick={onToggleWallMode}
