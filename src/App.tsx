@@ -16,6 +16,8 @@ function AppContent() {
   const [showComponentLibrary, setShowComponentLibrary] = useState(false);
   const [isMeasuring, setIsMeasuring] = useState(false);
   const [isWallMode, setIsWallMode] = useState(false);
+  const [isAngledCut, setIsAngledCut] = useState(false);
+  const [angledCutMaterialId, setAngledCutMaterialId] = useState('2x4-lumber');
   const [wallTargetFace, setWallTargetFace] = useState<WallTargetFace | null>(null);
 
   useEffect(() => {
@@ -57,15 +59,31 @@ function AppContent() {
       if (e.key === 'm' || e.key === 'M') {
         if (!e.metaKey && !e.ctrlKey) {
           e.preventDefault();
-          setIsMeasuring((v) => !v);
+          setIsMeasuring((v) => {
+            if (!v) { setIsWallMode(false); setIsAngledCut(false); setWallTargetFace(null); }
+            return !v;
+          });
         }
       }
 
       if (e.key === 'w' || e.key === 'W') {
         if (!e.metaKey && !e.ctrlKey) {
           e.preventDefault();
-          setIsWallMode((v) => !v);
-          if (isWallMode) setWallTargetFace(null);
+          setIsWallMode((v) => {
+            if (!v) { setIsMeasuring(false); setIsAngledCut(false); }
+            if (v) setWallTargetFace(null);
+            return !v;
+          });
+        }
+      }
+
+      if (e.key === 'a' || e.key === 'A') {
+        if (!e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          setIsAngledCut((v) => {
+            if (!v) { setIsMeasuring(false); setIsWallMode(false); setWallTargetFace(null); }
+            return !v;
+          });
         }
       }
 
@@ -79,11 +97,15 @@ function AppContent() {
           setIsWallMode(false);
           setWallTargetFace(null);
         }
+        if (isAngledCut) {
+          e.preventDefault();
+          setIsAngledCut(false);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.selectedBoxIds, state.clipboard, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes, undo, redo, canUndo, canRedo, groupSelectedBoxes, ungroupSelectedBoxes, isMeasuring, isWallMode]);
+  }, [state.selectedBoxIds, state.clipboard, copySelectedBoxes, pasteBoxes, duplicateSelectedBoxes, deleteSelectedBoxes, undo, redo, canUndo, canRedo, groupSelectedBoxes, ungroupSelectedBoxes, isMeasuring, isWallMode, isAngledCut]);
 
   const isBuilderMode = state.mode === 'component-builder';
 
@@ -126,17 +148,36 @@ function AppContent() {
         onToggleComponentLibrary={() => setShowComponentLibrary((v) => !v)}
         showComponentLibrary={showComponentLibrary}
         isMeasuring={isMeasuring}
-        onToggleMeasure={() => setIsMeasuring((v) => !v)}
+        onToggleMeasure={() => {
+          setIsMeasuring((v) => {
+            if (!v) { setIsWallMode(false); setIsAngledCut(false); setWallTargetFace(null); }
+            return !v;
+          });
+        }}
         isWallMode={isWallMode}
         onToggleWallMode={() => {
-          setIsWallMode((v) => !v);
-          setWallTargetFace(null);
+          setIsWallMode((v) => {
+            if (!v) { setIsMeasuring(false); setIsAngledCut(false); }
+            if (v) setWallTargetFace(null);
+            return !v;
+          });
         }}
+        isAngledCut={isAngledCut}
+        onToggleAngledCut={() => {
+          setIsAngledCut((v) => {
+            if (!v) { setIsMeasuring(false); setIsWallMode(false); setWallTargetFace(null); }
+            return !v;
+          });
+        }}
+        angledCutMaterialId={angledCutMaterialId}
+        onSetAngledCutMaterial={setAngledCutMaterialId}
       />
       <div className="flex-1 flex overflow-hidden relative">
         <Viewport
           isMeasuring={isMeasuring}
           isWallMode={isWallMode}
+          isAngledCut={isAngledCut}
+          angledCutMaterialId={angledCutMaterialId}
           onWallFaceSelect={handleWallFaceSelect}
         />
         <div className="absolute top-0 right-0 bottom-0 flex">
