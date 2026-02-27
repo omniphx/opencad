@@ -26,6 +26,7 @@ interface Box3DProps {
   cameraView: CameraView;
   isMeasuring?: boolean;
   isWallMode?: boolean;
+  isAngledCut?: boolean;
   onToggleSelect: (id: string) => void;
   onSelectGroup: (ids: string[]) => void;
   onToggleSelectGroup: (ids: string[]) => void;
@@ -41,7 +42,7 @@ interface Box3DProps {
   onWallFaceClick?: (box: Box, faceNormal: { x: number; y: number; z: number }) => void;
 }
 
-export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, isMeasuring, isWallMode, onToggleSelect, onSelectGroup, onToggleSelectGroup, onMove, onMoveSelected, snap, onShowToast, pointerCapturedByBox, onHistoryBatchStart, onHistoryBatchEnd, onWallFaceHover, onWallFaceClear, onWallFaceClick }: Box3DProps) {
+export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, isMeasuring, isWallMode, isAngledCut, onToggleSelect, onSelectGroup, onToggleSelectGroup, onMove, onMoveSelected, snap, onShowToast, pointerCapturedByBox, onHistoryBatchStart, onHistoryBatchEnd, onWallFaceHover, onWallFaceClear, onWallFaceClick }: Box3DProps) {
   const meshRef = useRef<Mesh>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(new Vector3());
@@ -105,8 +106,9 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, i
     : [box.id];
 
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
-    // In measure mode, let clicks propagate to the viewport's measure handler
+    // In measure or angled cut mode, let clicks propagate to the viewport handler
     if (isMeasuring) return;
+    if (isAngledCut) return;
     // In wall mode, face click is handled via onClick
     if (isWallMode) return;
     e.stopPropagation();
@@ -294,10 +296,10 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, i
         onPointerLeave={() => {
           if (isWallMode) { onWallFaceClear?.(); return; }
           handlePointerUp();
-          if (!isMeasuring) document.body.style.cursor = 'default';
+          if (!isMeasuring && !isAngledCut) document.body.style.cursor = 'default';
         }}
         onPointerEnter={() => {
-          if (isWallMode || isMeasuring) return;
+          if (isWallMode || isMeasuring || isAngledCut) return;
           if (!box.locked) document.body.style.cursor = 'move';
         }}
         onClick={(e: ThreeEvent<MouseEvent>) => {

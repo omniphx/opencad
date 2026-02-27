@@ -4,6 +4,11 @@ import { useProject } from '../../hooks/useProject';
 import { DEFAULT_MATERIALS } from '../../core/materials';
 import { exportProject } from '../../core/export';
 
+// Lumber materials suitable for angled cut tool
+const ANGLED_CUT_MATERIALS = DEFAULT_MATERIALS.filter((m) =>
+  ['2x4-lumber', '2x6-lumber', '4x4-post'].includes(m.id),
+);
+
 interface ToolbarProps {
   onToggleComponentLibrary?: () => void;
   showComponentLibrary?: boolean;
@@ -11,9 +16,13 @@ interface ToolbarProps {
   onToggleMeasure?: () => void;
   isWallMode?: boolean;
   onToggleWallMode?: () => void;
+  isAngledCut?: boolean;
+  onToggleAngledCut?: () => void;
+  angledCutMaterialId?: string;
+  onSetAngledCutMaterial?: (id: string) => void;
 }
 
-export function Toolbar({ onToggleComponentLibrary, showComponentLibrary, isMeasuring, onToggleMeasure, isWallMode, onToggleWallMode }: ToolbarProps) {
+export function Toolbar({ onToggleComponentLibrary, showComponentLibrary, isMeasuring, onToggleMeasure, isWallMode, onToggleWallMode, isAngledCut, onToggleAngledCut, angledCutMaterialId, onSetAngledCutMaterial }: ToolbarProps) {
   const { state, addBox, saveComponent, cancelComponentBuilder, toggleSnap, undo, redo, canUndo, canRedo, importProject } = useProjectStore();
   const { project, setUnitSystem } = useProject();
   const [componentName, setComponentName] = useState(state.currentTemplate?.name ?? '');
@@ -205,6 +214,30 @@ export function Toolbar({ onToggleComponentLibrary, showComponentLibrary, isMeas
       >
         Measure
       </button>
+
+      <button
+        onClick={onToggleAngledCut}
+        className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+          isAngledCut
+            ? 'bg-green-500 text-white shadow-sm'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+        }`}
+        title="Angled Cut (A)"
+      >
+        Angled Cut
+      </button>
+
+      {isAngledCut && (
+        <select
+          value={angledCutMaterialId}
+          onChange={(e) => onSetAngledCutMaterial?.(e.target.value)}
+          className="px-2 py-1.5 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-green-400"
+        >
+          {ANGLED_CUT_MATERIALS.map((mat) => (
+            <option key={mat.id} value={mat.id}>{mat.name}</option>
+          ))}
+        </select>
+      )}
 
       <div className="flex-1" />
 
