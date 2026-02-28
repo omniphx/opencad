@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ProjectProvider, useProjectStore } from './store/projectStore';
+import { CutFaceHoverProvider } from './store/cutFaceHoverContext';
 import { Toolbar } from './components/layout/Toolbar';
 import { Viewport } from './components/viewport/Viewport';
 import { PropertiesPanel } from './components/layout/PropertiesPanel';
@@ -163,7 +164,9 @@ function AppContent() {
 function App() {
   return (
     <ProjectProvider>
-      <AppContent />
+      <CutFaceHoverProvider>
+        <AppContent />
+      </CutFaceHoverProvider>
     </ProjectProvider>
   );
 }

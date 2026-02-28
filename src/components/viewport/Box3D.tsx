@@ -2,10 +2,25 @@ import { useRef, useState, useMemo, useCallback } from 'react';
 import { ThreeEvent, useThree, useFrame } from '@react-three/fiber';
 import { Mesh, Vector3, BoxGeometry, Plane, BufferGeometry } from 'three';
 import { Geometry, Base, Subtraction, Intersection, CSGGeometryRef } from '@react-three/csg';
-import { Box } from '../../types';
+import { Box, CutFace } from '../../types';
 import { getMaterialColor } from '../../core/materials';
 import { buildCutterProps } from '../../core/cuts';
+import { useCutFaceHover } from '../../store/cutFaceHoverContext';
 import type { CameraView } from './Viewport';
+
+// Face highlight geometry config (positions relative to box corner origin)
+const FACE_HIGHLIGHT: Record<CutFace, (w: number, h: number, d: number) => {
+  position: [number, number, number];
+  rotation: [number, number, number];
+  size: [number, number];
+}> = {
+  left:   (_w, h, d) => ({ position: [0,   h/2, d/2], rotation: [0, Math.PI/2, 0],  size: [d, h] }),
+  right:  (w,  h, d) => ({ position: [w,   h/2, d/2], rotation: [0, Math.PI/2, 0],  size: [d, h] }),
+  top:    (w,  h, d) => ({ position: [w/2, h,   d/2], rotation: [-Math.PI/2, 0, 0], size: [w, d] }),
+  bottom: (w, _h, d) => ({ position: [w/2, 0,   d/2], rotation: [Math.PI/2, 0, 0],  size: [w, d] }),
+  front:  (w,  h, d) => ({ position: [w/2, h/2, d],   rotation: [0, 0, 0],           size: [w, h] }),
+  back:   (w,  h, _d) => ({ position: [w/2, h/2, 0],   rotation: [0, 0, 0],          size: [w, h] }),
+};
 
 // Per-view drag config: which plane to drag on and which axis stays fixed
 const DRAG_PLANE_CONFIG: Record<CameraView, { normal: [number, number, number]; fixedAxis: 'x' | 'y' | 'z' }> = {
@@ -55,6 +70,8 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, i
   const { camera, raycaster, pointer } = useThree();
 
   const color = getMaterialColor(box.materialId);
+  const { hoveredCutFace } = useCutFaceHover();
+  const highlightFace = hoveredCutFace?.boxId === box.id ? hoveredCutFace.face : null;
 
   const hasCuts = (box.cuts?.length ?? 0) > 0;
   const csgRef = useRef<CSGGeometryRef>(null);
@@ -372,6 +389,18 @@ export function Box3D({ box, allBoxes, isSelected, selectedBoxIds, cameraView, i
           </mesh>
         );
       })}
+
+      {/* Cut face highlight — shown when a cut's face selector is focused */}
+      {highlightFace && (() => {
+        const { width: w, height: h, depth: d } = box.dimensions;
+        const cfg = FACE_HIGHLIGHT[highlightFace](w, h, d);
+        return (
+          <mesh position={cfg.position} rotation={cfg.rotation}>
+            <planeGeometry args={cfg.size} />
+            <meshBasicMaterial color="#3b82f6" transparent opacity={0.35} depthWrite={false} />
+          </mesh>
+        );
+      })()}
 
     </group>
   );

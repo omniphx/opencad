@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { v4 as uuid } from 'uuid';
 import { Box, BoxCut, CutFace } from '../../types';
 import { UnitSystem } from '../../types';
+import { useCutFaceHover } from '../../store/cutFaceHoverContext';
 
 const FACE_LABELS: Record<CutFace, string> = {
   left: 'Left end',
@@ -22,6 +24,12 @@ interface CutsSectionProps {
 
 export function CutsSection({ box, onUpdateCuts }: CutsSectionProps) {
   const cuts = box.cuts ?? [];
+  const { setHoveredCutFace } = useCutFaceHover();
+
+  // Clear highlight when this component unmounts (box deselected)
+  useEffect(() => {
+    return () => setHoveredCutFace(null);
+  }, []);
 
   const addCut = () => {
     onUpdateCuts([...cuts, { id: uuid(), face: 'left', angle: 45 }]);
@@ -45,7 +53,13 @@ export function CutsSection({ box, onUpdateCuts }: CutsSectionProps) {
             <label className="text-slate-500 text-xs w-10">Face</label>
             <select
               value={cut.face}
-              onChange={(e) => updateCut(cut.id, { face: e.target.value as CutFace })}
+              onChange={(e) => {
+                const face = e.target.value as CutFace;
+                updateCut(cut.id, { face });
+                setHoveredCutFace({ boxId: box.id, face });
+              }}
+              onFocus={() => setHoveredCutFace({ boxId: box.id, face: cut.face })}
+              onBlur={() => setHoveredCutFace(null)}
               className="flex-1 px-2 py-1 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
               {FACE_OPTIONS.map((f) => (
