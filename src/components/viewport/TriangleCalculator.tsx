@@ -35,7 +35,7 @@ export function TriangleCalculator() {
           <path d="M0,7 L3,7 L3,10" fill="none" stroke="#3b82f6" strokeWidth="0.9" />
         </svg>
         Tri Calc
-        <span className="ml-auto text-gray-400">{open ? '▲' : '▼'}</span>
+        <span className="ml-auto text-gray-400">{open ? '▼' : '▲'}</span>
       </button>
 
       {open && (
