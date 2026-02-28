@@ -1,19 +1,56 @@
 import { useState } from 'react';
 
+function evaluateMathExpression(expr: string): number {
+  const sanitized = expr.replace(/\s/g, '');
+  if (!/^[0-9+\-*/.()]+$/.test(sanitized)) return NaN;
+  if (/\(\)/.test(sanitized)) return NaN;
+  try {
+    const result = new Function(`"use strict"; return (${sanitized});`)();
+    return typeof result === 'number' && isFinite(result) ? result : NaN;
+  } catch {
+    return NaN;
+  }
+}
+
+function useMathInput(initial = '') {
+  const [raw, setRaw] = useState(initial);
+  const [num, setNum] = useState<number | null>(null);
+
+  const handleChange = (value: string) => setRaw(value);
+
+  const handleCommit = () => {
+    const result = evaluateMathExpression(raw);
+    if (!isNaN(result) && result > 0) {
+      setNum(result);
+      setRaw(String(result));
+    } else if (raw === '' || raw === '0') {
+      setNum(null);
+      setRaw('');
+    } else {
+      // Revert to last valid value
+      setRaw(num !== null ? String(num) : '');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+  };
+
+  return { raw, num, handleChange, handleCommit, handleKeyDown };
+}
+
 export function TriangleCalculator() {
   const [open, setOpen] = useState(false);
-  const [a, setA] = useState('');
-  const [b, setB] = useState('');
+  const sideA = useMathInput();
+  const sideB = useMathInput();
 
-  const aNum = parseFloat(a);
-  const bNum = parseFloat(b);
-  const valid = !isNaN(aNum) && aNum > 0 && !isNaN(bNum) && bNum > 0;
+  const aNum = sideA.num;
+  const bNum = sideB.num;
+  const valid = aNum !== null && bNum !== null && aNum > 0 && bNum > 0;
 
-  const c = valid ? Math.sqrt(aNum ** 2 + bNum ** 2) : null;
-  // α = angle at bottom-right (between b and c) = arctan(a/b)
-  const alpha = valid ? Math.atan2(aNum, bNum) * (180 / Math.PI) : null;
-  // β = angle at top-left (between a and c) = arctan(b/a)
-  const beta = valid ? Math.atan2(bNum, aNum) * (180 / Math.PI) : null;
+  const c = valid ? Math.sqrt(aNum! ** 2 + bNum! ** 2) : null;
+  const alpha = valid ? Math.atan2(aNum!, bNum!) * (180 / Math.PI) : null;
+  const beta  = valid ? Math.atan2(bNum!, aNum!) * (180 / Math.PI) : null;
 
   const fmt = (n: number) => {
     const s = n.toFixed(4);
@@ -42,17 +79,12 @@ export function TriangleCalculator() {
         <div className="border-t border-gray-100 p-3 w-52">
           {/* SVG diagram: right angle at bottom-left, a=vertical, b=horizontal, c=hypotenuse */}
           <svg width="100%" viewBox="0 0 120 96" className="mb-3">
-            {/* Triangle fill */}
             <polygon points="10,80 110,80 10,10" fill="#eff6ff" stroke="#3b82f6" strokeWidth="1.5" />
-            {/* Right-angle square marker */}
             <path d="M 10,70 L 20,70 L 20,80" fill="none" stroke="#3b82f6" strokeWidth="1" />
-            {/* Side labels */}
             <text x="1" y="48" fontSize="11" fill="#1d4ed8" fontWeight="bold" fontFamily="sans-serif">a</text>
             <text x="55" y="93" fontSize="11" fill="#1d4ed8" fontWeight="bold" fontFamily="sans-serif">b</text>
             <text x="68" y="40" fontSize="11" fill="#1d4ed8" fontWeight="bold" fontFamily="sans-serif">c</text>
-            {/* Angle label α at bottom-right */}
             <text x="86" y="77" fontSize="9" fill="#6b7280" fontFamily="sans-serif">α</text>
-            {/* Angle label β at top-left */}
             <text x="14" y="26" fontSize="9" fill="#6b7280" fontFamily="sans-serif">β</text>
           </svg>
 
@@ -61,24 +93,26 @@ export function TriangleCalculator() {
             <div className="flex items-center gap-2">
               <label className="text-xs font-bold text-blue-700 w-3">a</label>
               <input
-                type="number"
-                value={a}
-                onChange={(e) => setA(e.target.value)}
+                type="text"
+                inputMode="decimal"
+                value={sideA.raw}
+                onChange={(e) => sideA.handleChange(e.target.value)}
+                onBlur={sideA.handleCommit}
+                onKeyDown={sideA.handleKeyDown}
                 placeholder="0"
-                min="0"
-                step="any"
                 className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400"
               />
             </div>
             <div className="flex items-center gap-2">
               <label className="text-xs font-bold text-blue-700 w-3">b</label>
               <input
-                type="number"
-                value={b}
-                onChange={(e) => setB(e.target.value)}
+                type="text"
+                inputMode="decimal"
+                value={sideB.raw}
+                onChange={(e) => sideB.handleChange(e.target.value)}
+                onBlur={sideB.handleCommit}
+                onKeyDown={sideB.handleKeyDown}
                 placeholder="0"
-                min="0"
-                step="any"
                 className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-400"
               />
             </div>
